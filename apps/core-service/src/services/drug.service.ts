@@ -29,14 +29,14 @@ export class DrugService {
 
         const where: Prisma.DrugWhereInput = {
             isActive: isActive ?? true,
-            ...(dosageForm && { dosageForm }),
-            ...(requiresPrescription !== undefined && { requiresPrescription }),
-            ...(search && {
+            ...(dosageForm ? { dosageForm } : {}),
+            ...(requiresPrescription !== undefined ? { requiresPrescription } : {}),
+            ...(search ? {
                 OR: [
                     { name: { contains: search, mode: "insensitive" } },
                     { internationalName: { contains: search, mode: "insensitive" } }
                 ]
-            })
+            } : {})
         };
 
         const [items, total] = await prisma.$transaction([
