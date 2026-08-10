@@ -2,39 +2,53 @@
 
 Ushbu hujjat loyihaning hozirgi holatini va admin paneli bilan birga to'liq tizimni qurish uchun tayyorlanishi kerak bo'lgan qismlarni jamlaydi.
 
-## 1. Hozirgi holat (2026-07-28 holatiga ko'ra)
+> **Arxitektura qarori**: loyiha boshida mikroservis sifatida rejalashtirilgan edi (`gateway`, `auth-service`, `drug-service`, `prescription-service`, `notification-service` — barchasi alohida). Amalda faqat `auth-service`da kod bor edi, qolganlari bo'sh papka bo'lgani va jamoa hali kichik (solo/kichik dev) bo'lgani uchun **modular monolitga** o'tildi: `auth-service` kodi `core-service`ga ko'chirildi, `drug`/`prescription`/`notification` shu monolit ichida modul sifatida yoziladi. **`ocr-service`** ataylab alohida qoldirildi — Gemini API bilan og'ir/resurs talab qiladigan ish bo'lgani uchun kelajakda mustaqil scale qilinishi mumkin.
 
-Loyiha mikroservis arxitekturasida rejalashtirilgan (`apps/*`), lekin hozircha faqat ikkita servis real kod bilan yozilgan:
+## 1. Hozirgi holat
 
-| Servis | Holati | Izoh |
+| Qism | Holati | Izoh |
 |---|---|---|
-| `apps/auth-service` | ✅ Ishlab turibdi | JWT auth, RBAC, refresh token rotation. To'liq API hujjati: [`apps/auth-service/docs/API.md`](../apps/auth-service/docs/API.md) |
-| `apps/ocr-service` | ✅ Kod bor | Gemini asosida retsept rasmidan matn ajratib olish |
-| `apps/gateway` | ⛔ Bo'sh papka | Hali yozilmagan |
-| `apps/drug-service` | ⛔ Bo'sh papka | Hali yozilmagan |
-| `apps/prescription-service` | ⛔ Bo'sh papka | Hali yozilmagan |
-| `apps/notification-service` | ⛔ Bo'sh papka | Hali yozilmagan |
-| `packages/shared-types` | ⛔ Bo'sh | Servislar orasida umumiy tiplar (User, Role, DTO'lar) uchun |
-| `packages/shared-config` | ⛔ Bo'sh | Umumiy env/config validatsiyasi |
-| `packages/shared-logger` | ⛔ Bo'sh | Umumiy logging (masalan pino/winston wrapper) |
-| `infra/docker-compose.yml` | ⛔ Bo'sh | Postgres, Redis, servislarni birga ishga tushirish uchun |
-| `infra/k8s` | ⛔ Bo'sh | Production uchun k8s manifestlari |
+| `apps/core-service` | ✅ Ishlab turibdi | Modular monolit. Hozircha `auth` moduli to'liq ishlaydi (JWT auth, RBAC, refresh token rotation). Port: **3001**. API hujjati: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) |
+| `apps/ocr-service` | ✅ Kod bor | Gemini asosida retsept rasmidan matn ajratib olish, alohida servis. Port: **3000** |
+| `packages/shared-types` | ⛔ Bo'sh | Endi shart emas — monolit ichida bitta `@prisma/client` va umumiy tiplar bitta joyda |
+| `packages/shared-config` | ⛔ Bo'sh | Endi shart emas (monolitda bitta `env.config.ts`) |
+| `packages/shared-logger` | ⛔ Bo'sh | `core-service` va `ocr-service` orasida umumiy logging kerak bo'lsa hali foydali bo'lishi mumkin |
+| `infra/docker-compose.yml` | ⛔ Bo'sh | Postgres + `core-service` + `ocr-service`ni birga ishga tushirish uchun |
+| `infra/k8s` | ⛔ Bo'sh | Production uchun k8s manifestlari (MVP uchun shart emas) |
 | **Admin paneli (frontend)** | ⛔ Mavjud emas | Hali boshlanmagan |
 | **Bemor/Shifokor mobil/veb ilova** | ⛔ Mavjud emas | Hali boshlanmagan |
 
-Auth-service'da rollar allaqachon tayyor: `BEMOR`, `SHIFOKOR`, `ADMINISTRATOR` (`prisma/schema.prisma`), va `rbac.middleware.ts`'da `authorize(...roles)` funksiyasi mavjud — bu admin panelni himoyalash uchun tayyor infratuzilma.
+`core-service`da rollar allaqachon tayyor: `BEMOR`, `SHIFOKOR`, `ADMINISTRATOR` (`prisma/schema.prisma`), va `rbac.middleware.ts`'da `authorize(...roles)` funksiyasi mavjud — bu admin panelni himoyalash uchun tayyor infratuzilma.
 
 ---
 
-## 2. Admin paneli (frontend)
+## 2. `core-service` tuzilmasi
+
+```
+apps/core-service/src/
+├── config/            # env, prisma client — umumiy
+├── middleware/         # auth, rbac, validate, error — umumiy
+├── utils/              # jwt, otp, password, refresh-token — umumiy
+├── types/               # express kengaytmalari — umumiy
+├── modules/
+│   └── auth/            # controller, service, routes, dto — bitta domenga tegishli hammasi bir joyda
+│       # keyingi bosqichda: modules/drug/, modules/prescription/, modules/notification/
+└── server.ts             # barcha modul routerlarini bu yerda mount qilamiz
+```
+
+Yangi modul qo'shish tartibi: `src/modules/<nom>/` papkasini `auth` moduli patternida yaratish (`*.controller.ts`, `*.service.ts`, `*.routes.ts`, `*.dto.ts`), so'ng `server.ts`da `app.use("/api/v1/<nom>", <nom>Router)` bilan ulash. Umumiy `middleware/`, `utils/`, `types/` papkalaridan foydalanish, takrorlamaslik.
+
+---
+
+## 3. Admin paneli (frontend)
 
 **Maqsad**: `ADMINISTRATOR` roli uchun tizimni boshqarish interfeysi.
 
 ### Kerakli funksiyalar
 - **Foydalanuvchilar boshqaruvi**: ro'yxatni ko'rish, qidirish, `isActive` orqali bloklash/aktivlashtirish
-- **Shifokor/Administrator provisioning**: hozircha auth-service'da faqat DB orqali qo'lda qilinadi — admin panel uchun bu alohida backend endpoint sifatida yozilishi kerak (masalan `POST /admin/users` role bilan)
-- **Dorilar katalogi boshqaruvi**: qo'shish/tahrirlash/o'chirish, narx va qoldiq (stock) — `drug-service` orqali
-- **Retseptlar monitoringi**: barcha retseptlar ro'yxati, status (kutilmoqda/tasdiqlangan/rad etilgan) — `prescription-service` orqali
+- **Shifokor/Administrator provisioning**: hozircha faqat DB orqali qo'lda qilinadi — admin panel uchun bu alohida backend endpoint sifatida yozilishi kerak (masalan `POST /api/v1/auth/users/provision`)
+- **Dorilar katalogi boshqaruvi**: qo'shish/tahrirlash/o'chirish, narx va qoldiq (stock) — `drug` moduli orqali
+- **Retseptlar monitoringi**: barcha retseptlar ro'yxati, status (kutilmoqda/tasdiqlangan/rad etilgan) — `prescription` moduli orqali
 - **Statistika/Dashboard**: kunlik ro'yxatdan o'tishlar, faol foydalanuvchilar, eng ko'p sotilgan dorilar
 - **Audit log**: kim, qachon, nima o'zgartirgani (ayniqsa retsept tasdiqlash/rad etishda muhim)
 
@@ -57,61 +71,42 @@ GET    /api/v1/prescriptions              — barcha retseptlar (admin ko'rinish
 
 ---
 
-## 3. Yozilishi kerak bo'lgan backend xizmatlar
+## 4. Yozilishi kerak bo'lgan modullar (`core-service` ichida)
 
-### `gateway`
-- Barcha servislarga yagona kirish nuqtasi (reverse proxy)
-- JWT tekshirish (yoki auth-service'ga proksi qilish)
-- Rate limiting, CORS, request logging
-- Tavsiya: Express + `http-proxy-middleware`, yoki agar ko'proq trafik kutilsa — Nginx/Kong
-
-### `drug-service`
+### `drug` moduli
 - Dorilar katalogi: nomi, ishlab chiqaruvchi, narx, qoldiq, retsept talab qiladimi (`requiresPrescription: boolean`)
 - Qidiruv/filter API
-- Prisma + Postgres (auth-service pattern'iga o'xshash alohida schema)
+- Prisma schema'ga yangi model qo'shiladi (bitta umumiy DB/schema, `auth` moduli bilan bir xil Prisma client)
 
-### `prescription-service`
+### `prescription` moduli
 - Retsept yaratish (shifokor tomonidan yoki OCR natijasidan)
 - `ocr-service`'dan kelgan matnni tuzilgan retsept ma'lumotiga aylantirish
 - Status oqimi: `PENDING → APPROVED/REJECTED`
 - Shifokor tasdiqlash endpointlari (RBAC: faqat `SHIFOKOR`)
 
-### `notification-service`
-- SMS yuborish — Eskiz.uz integratsiyasi (auth-service'dagi `forgot-password` hozircha `[SMS STUB]` konsolga chiqaradi, buni shu servis orqali real qilish kerak)
+### `notification` moduli
+- SMS yuborish — Eskiz.uz integratsiyasi (hozircha `forgot-password` `[SMS STUB]` konsolga chiqaradi, buni real qilish kerak)
 - Push/email (keyingi bosqich)
-- Boshqa servislar bilan aloqa: sinxron REST yoki queue (quyida)
 
-### Servislararo aloqa
-Hozir hech qanday inter-service communication mexanizmi yo'q. Ikki variant:
-1. **Sinxron REST** — oddiy, lekin servislar bir-biriga bog'liq bo'lib qoladi (masalan prescription-service to'g'ridan-to'g'ri notification-service'ga HTTP so'rov yuboradi)
-2. **Message queue (RabbitMQ/Redis Streams)** — masalan "retsept tasdiqlandi" hodisasi yuboriladi, notification-service uni tinglaydi. Kelajakda kengayish uchun tavsiya etiladi, lekin boshlang'ich bosqichda ortiqcha bo'lishi mumkin.
+### `core-service` ↔ `ocr-service` aloqasi
+Ikkita alohida servis qolgani uchun ular orasida HTTP orqali sinxron aloqa kerak bo'ladi: `prescription` moduli retsept rasmini qabul qilganda `ocr-service`ning `/api/ocr/analyze` endpointiga so'rov yuboradi, natijani qabul qilib tuzilgan retsept sifatida saqlaydi. Servis manzili env orqali beriladi (`OCR_SERVICE_URL`).
 
 ---
 
-## 4. Mijoz ilovalari
+## 5. Mijoz ilovalari
 
 - **Bemor ilovasi** (mobil yoki veb PWA): ro'yxatdan o'tish/login, retsept rasmini yuklash (OCR'ga), dori qidirish, buyurtma
 - **Shifokor interfeysi**: retseptlarni ko'rish/tasdiqlash/yozish
 
 ---
 
-## 5. Infratuzilma va DevOps
+## 6. Infratuzilma va DevOps
 
-- [ ] `infra/docker-compose.yml`ni to'ldirish: Postgres (har servis uchun alohida DB yoki schema), Redis (agar queue/cache kerak bo'lsa), har bir `apps/*` servisi
-- [ ] Har servis uchun `.env.example` (auth-service'da bor, boshqalarida ham bo'lishi kerak) — **muhim: `.env` fayllar hech qachon git'ga commit qilinmasin**
+- [ ] `infra/docker-compose.yml`ni to'ldirish: Postgres, `core-service`, `ocr-service`
+- [ ] Har servis uchun `.env.example` (`core-service`da bor, `ocr-service`da ham bo'lishi kerak) — **muhim: `.env` fayllar hech qachon git'ga commit qilinmasin**
 - [ ] CI/CD pipeline (test + build + deploy)
 - [ ] `infra/k8s` — production uchun manifestlar (keyingi bosqich, MVP uchun shart emas)
 - [ ] Secrets boshqaruvi (production'da `.env` emas — Vault/AWS Secrets Manager/K8s Secrets)
-
----
-
-## 6. Umumiy paketlar (`packages/*`)
-
-Hozircha bo'sh, lekin ko'p servis bo'lgani sayin takrorlanishning oldini olish uchun kerak:
-
-- **`shared-types`**: `Role` enum, umumiy DTO interfeyslari (`ApiResponse<T>` kabi — hozir auth-service ichida lokal e'lon qilingan)
-- **`shared-config`**: env validatsiya patterni (auth-service'dagi `env.config.ts`ga o'xshash, lekin umumiy)
-- **`shared-logger`**: barcha servislarda bir xil formatdagi loglar (masalan `pino`)
 
 ---
 
@@ -125,10 +120,9 @@ Hozircha bo'sh, lekin ko'p servis bo'lgani sayin takrorlanishning oldini olish u
 
 ## 8. Tavsiya etilgan ustuvorlik tartibi (MVP uchun)
 
-1. `gateway` — servislarni birlashtirish uchun zamin
-2. `drug-service` — oddiy CRUD, tez yoziladi
-3. `prescription-service` + OCR bilan integratsiya
-4. Admin panel — foydalanuvchi va dori boshqaruvi (asosiy funksiyalar)
-5. `notification-service` — real SMS integratsiyasi
-6. Bemor/Shifokor mijoz ilovalari
-7. Infra qattiqlashtirish (docker-compose to'liq, keyin k8s)
+1. `drug` moduli — oddiy CRUD, tez yoziladi, `core-service` ichida
+2. `prescription` moduli + `ocr-service` bilan HTTP integratsiya
+3. Admin panel — foydalanuvchi va dori boshqaruvi (asosiy funksiyalar)
+4. `notification` moduli — real SMS integratsiyasi
+5. Bemor/Shifokor mijoz ilovalari
+6. Infra qattiqlashtirish (docker-compose to'liq, keyin k8s)

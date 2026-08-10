@@ -1,4 +1,4 @@
-# Auth Service — API hujjati
+# Core Service — Auth moduli API hujjati
 
 Base URL: `http://localhost:3001/api/v1/auth`
 Barcha javoblar `application/json` formatida qaytadi va umumiy shakli:

@@ -1,12 +1,12 @@
 import { User } from "@prisma/client";
-import { prisma } from "../config/prisma.client";
-import { env } from "../config/env.config";
-import { AppError } from "../utils/app-error.util";
-import { hashPassword, comparePassword } from "../utils/password.util";
-import { signAccessToken } from "../utils/jwt.util";
-import { generateRefreshToken, hashRefreshToken } from "../utils/refresh-token.util";
-import { generateOtpCode, hashOtpCode } from "../utils/otp.util";
-import { AuthResponse, AuthUserResponse, ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from "../dtos/auth.dto";
+import { prisma } from "../../config/prisma.client";
+import { env } from "../../config/env.config";
+import { AppError } from "../../utils/app-error.util";
+import { hashPassword, comparePassword } from "../../utils/password.util";
+import { signAccessToken } from "../../utils/jwt.util";
+import { generateRefreshToken, hashRefreshToken } from "../../utils/refresh-token.util";
+import { generateOtpCode, hashOtpCode } from "../../utils/otp.util";
+import { AuthResponse, AuthUserResponse, ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from "./auth.dto";
 
 const toUserResponse = (user: User): AuthUserResponse => ({
     id: user.id,

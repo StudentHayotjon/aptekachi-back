@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { AuthController } from "../controllers/auth.controller";
-import { validate } from "../middleware/validate.middleware";
-import { authenticate } from "../middleware/auth.middleware";
-import { forgotPasswordSchema, loginSchema, refreshSchema, registerSchema, resetPasswordSchema } from "../dtos/auth.dto";
+import { AuthController } from "./auth.controller";
+import { validate } from "../../middleware/validate.middleware";
+import { authenticate } from "../../middleware/auth.middleware";
+import { forgotPasswordSchema, loginSchema, refreshSchema, registerSchema, resetPasswordSchema } from "./auth.dto";
 
 export const authRouter = Router();
 

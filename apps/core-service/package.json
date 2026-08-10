@@ -1,7 +1,7 @@
 {
-  "name": "auth-service",
+  "name": "core-service",
   "version": "1.0.0",
-  "description": "Aptekachi Auth Service — OAuth 2.0 / JWT authentication va RBAC",
+  "description": "Aptekachi Core Service — Auth (OAuth 2.0 / JWT + RBAC), Drug, Prescription va Notification modullarini birlashtiruvchi modular monolit",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch --use-system-ca src/server.ts",
