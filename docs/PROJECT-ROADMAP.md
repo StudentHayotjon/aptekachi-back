@@ -1,126 +1,82 @@
 # Aptekachi v0 — Loyiha xaritasi (Roadmap)
 
-Ushbu hujjat loyihaning hozirgi holatini va admin paneli bilan birga to'liq tizimni qurish uchun tayyorlanishi kerak bo'lgan qismlarni jamlaydi.
+Manba hujjat: `APTEKACHI_TZ_v2_2_final.docx` (TZ v2.1). Ushbu fayl — TZ'dagi to'liq vizyonni **hozirgi real imkoniyatlarga** (solo/kichik dev, faqat Node.js/TypeScript stack, tashqi integratsiyalar hali yo'q) moslab qayta tartiblangan ish rejasi. TZ — maqsad; bu hujjat — unga boradigan real yo'l.
 
-> **Arxitektura qarori**: loyiha boshida mikroservis sifatida rejalashtirilgan edi (`gateway`, `auth-service`, `drug-service`, `prescription-service`, `notification-service` — barchasi alohida). Amalda faqat `auth-service`da kod bor edi, qolganlari bo'sh papka bo'lgani va jamoa hali kichik (solo/kichik dev) bo'lgani uchun **modular monolitga** o'tildi: `auth-service` kodi `core-service`ga ko'chirildi, `drug`/`prescription`/`notification` shu monolit ichida modul sifatida yoziladi. **`ocr-service`** ataylab alohida qoldirildi — Gemini API bilan og'ir/resurs talab qiladigan ish bo'lgani uchun kelajakda mustaqil scale qilinishi mumkin.
+## 0. TZ va reallik o'rtasidagi tafovut — nega to'liq TZ MVP emas
 
-## 1. Hozirgi holat
+TZ'ning o'zi "MVP" deb atagan qism (§9) ham quyidagilarni talab qiladi: iOS (Swift) + Android (Java) native jamoalar, Python (FastAPI/spaCy/LangChain) jamoasi, **dmed davlat tizimiga real API kirish**, DrugBank kommertsiya litsenziyasi, Kong/Keycloak/MinIO/RabbitMQ/ClickHouse/Elasticsearch infratuzilmasi — 11 milestone, ko'p kishilik jamoa uchun mo'ljallangan. Hozirgi loyiha buning hech biriga ega emas — faqat Node.js/TypeScript backend (`core-service`, `ocr-service`) bor, frontend/mobil ilova umuman yo'q.
+
+**Muhim aniqlik**: TZ'da hech qanday sotib olish/buyurtma (e-commerce) funksiyasi yo'q — Aptekachi bu **retsept import + dori qabul qilish eslatma tizimi**, do'kon emas. (Oldingi tahlilda bu noto'g'ri taxmin qilingan edi — TZ o'qib chiqilgach tuzatildi.)
+
+**dmed API holati**: hozircha kirish huquqi yo'q, hamkorlik muzokara jarayonida. Shuning uchun F-001 (★ASOSIY) hozircha **mock adapter** bilan quriladi — real kalitlar kelganda faqat adapter implementatsiyasi almashtiriladi, qolgan tizim o'zgarmaydi.
+
+---
+
+## 1. TZ funksiyalari — holat va reja
+
+| # | TZ funksiyasi | Ustuvorlik (TZ) | Bizda holat |
+|---|---|---|---|
+| F-001 | dmed QR retsept integratsiyasi | ★ ASOSIY, MVP #1 | ❌ Yo'q — **keyingi navbatda**, mock adapter bilan |
+| F-002 | OCR chek/retsept skaneri | ★ INNOVATSIYA, MVP #2 | ✅ Qurilgan — `ocr-service` (Gemini) + `core-service`dagi `prescription` moduli. Stack TZ'dan farqli (Python+Google Vision+spaCy/RxNorm o'rniga Node.js+Gemini) — pragmatik almashtirish, natija bir xil |
+| F-003 | Smart eslatma tizimi (push, missed dose, refill, drug interaction alert, Ramazon mode) | MVP | ❌ Yo'q — mahsulotning **asosiy qiymati** (dori ichishni eslatish), hali qurilmagan |
+| F-004 | Dori ma'lumotlar bazasi (RxNorm/DrugBank/OpenFDA) + interaction checker | MVP | ⚠️ Qisman — oddiy `Drug` katalogi bor (`drug` moduli), lekin DrugBank litsenziyasi va interaction engine yo'q |
+| F-005..F-010 | Vital signs, AI Assistant, Oilaviy profil, Gamification, Apteka Map, Telemedicine | v1.5/v2.0 | Ataylab qamrovdan tashqarida — TZ'ning o'zida ham keyingi bosqich |
+| — | Sotib olish/buyurtma | TZ'da yo'q | ❌ Kerak emas — mahsulot qamrovida yo'q |
+
+## 2. Rollar va infratuzilma — TZ bilan solishtirish
+
+`Bemor` / `Shifokor` / `Administrator` rollari va Auth Service porti (**3001**) TZ'ga aynan mos (`core-service`da tayyor). Farqlar:
+
+| TZ talabi | Bizda qaror | Sabab |
+|---|---|---|
+| Node.js (Auth/Prescription/Notification) + Python (OCR/Drug/AI) — mikroservislar, Kong gateway | Bitta Node.js/TS modular monolit (`core-service`) + alohida `ocr-service` | Solo dev uchun 2 tilni parallel boshqarish, Kong/Keycloak sozlash — ortiqcha murakkablik. Modullar keyin kerak bo'lsa alohida servisga ajratiladi ([oldingi muhokama](#)) |
+| MinIO (S3-compatible), 30 min TTL | Lokal disk (`uploads/`) | MVP uchun yetarli, production'da S3/MinIO'ga o'tish kerak bo'ladi |
+| RabbitMQ, ClickHouse, Elasticsearch, Sentry, Grafana | Yo'q | MVP bosqichida ortiqcha — trafik/monitoring ehtiyoji paydo bo'lgach qo'shiladi |
+| iOS Swift + Android Java native | Yo'q | Frontend umuman yo'q — quyida ko'rib chiqiladi |
+
+---
+
+## 3. Qayta belgilangan MVP ustuvorligi
+
+1. **F-001 — dmed QR integratsiyasi (mock adapter bilan)** ← **keyingi qadam**
+   - `Prescription` modeliga `dmedUuid` va `source` (`MANUAL_OCR` / `DMED_QR`) maydoni qo'shiladi
+   - `POST /api/v1/prescriptions/dmed` — QR'dan o'qilgan UUID qabul qiladi, `DmedAdapter` interfeysi orqali ma'lumot oladi
+   - `DmedAdapter`ning hozirgi implementatsiyasi — **mock** (test UUID'lar uchun qo'lda tayyorlangan javob qaytaradi). Real API kalitlari kelganda faqat shu implementatsiya almashtiriladi (TZ o'zi tavsiya qilgan "Adapter layer" strategiyasi)
+2. **F-003 — Smart eslatma tizimi (soddalashtirilgan)**
+   - To'liq TZ versiyasi (FCM/APNs, Bull Queue, Ramazon mode, voice TTS) native ilova va queue infratuzilmasini talab qiladi — hozircha yo'q
+   - MVP versiyasi: `MedicationSchedule` modeli (tasdiqlangan retsept/OCR natijasidan avtomatik yaratiladi) + oddiy cron-based tekshiruv + **email yoki SMS** orqali eslatma (push o'rniga, chunki mobil ilova yo'q)
+3. **F-004 — Drug interaction checker — soddalashtirilgan yoki keyinga qoldirish**
+   - DrugBank kommertsiya litsenziyasi talab qiladi (pullik/murakkab) — hozircha real ma'lumot manbai yo'q
+   - Muqobil: RxNorm (NIH/NLM, **bepul**) orqali faqat generic nom/ATC kod — to'liq interaction checker emas, lekin boshlanish nuqtasi. Yoki bu funksiyani butunlay keyingi bosqichga qoldirish
+4. **Frontend — PWA (web), native emas**
+   - TZ ham PWA'ni (Node.js/Next.js) muqobil platforma sifatida sanaydi — solo dev uchun eng realistik yo'l
+   - iOS/Android native — jiddiy resurs (alohida Swift/Java dev) talab qiladi, hozircha qamrovdan tashqarida
+5. Admin panel, `notification` moduli (real SMS) — F-001/F-003 bilan bog'liq holda, ulardan keyin
+
+---
+
+## 4. Hozirgi holat (`apps/*`)
 
 | Qism | Holati | Izoh |
 |---|---|---|
-| `apps/core-service` | ✅ Ishlab turibdi | Modular monolit (qavatli tuzilma: `controllers/`, `services/`, `dtos/`, `routes/`). `auth`, `drug` va `prescription` modullari to'liq ishlaydi. Port: **3001**. API hujjati: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) |
-| `apps/ocr-service` | ✅ Kod bor | Gemini asosida retsept rasmidan matn ajratib olish, alohida servis. Port: **3000** |
-| `packages/shared-types` | ⛔ Bo'sh | Endi shart emas — monolit ichida bitta `@prisma/client` va umumiy tiplar bitta joyda |
-| `packages/shared-config` | ⛔ Bo'sh | Endi shart emas (monolitda bitta `env.config.ts`) |
-| `packages/shared-logger` | ⛔ Bo'sh | `core-service` va `ocr-service` orasida umumiy logging kerak bo'lsa hali foydali bo'lishi mumkin |
-| `infra/docker-compose.yml` | ⛔ Bo'sh | Postgres + `core-service` + `ocr-service`ni birga ishga tushirish uchun |
-| `infra/k8s` | ⛔ Bo'sh | Production uchun k8s manifestlari (MVP uchun shart emas) |
-| **Admin paneli (frontend)** | ⛔ Mavjud emas | Hali boshlanmagan |
-| **Bemor/Shifokor mobil/veb ilova** | ⛔ Mavjud emas | Hali boshlanmagan |
-
-`core-service`da rollar allaqachon tayyor: `BEMOR`, `SHIFOKOR`, `ADMINISTRATOR` (`prisma/schema.prisma`), va `rbac.middleware.ts`'da `authorize(...roles)` funksiyasi mavjud — bu admin panelni himoyalash uchun tayyor infratuzilma.
+| `apps/core-service` | ✅ Ishlab turibdi | Modular monolit. `auth`, `drug`, `prescription` (F-002 OCR oqimi) modullari tayyor. Port: **3001**. API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) |
+| `apps/ocr-service` | ✅ Ishlab turibdi | Gemini asosida OCR (F-002). Port: **3000** |
+| F-001 dmed integratsiyasi | ❌ Keyingi qadam | Mock adapter bilan boshlanadi |
+| F-003 Smart eslatma | ❌ Keyingi qadam | Soddalashtirilgan (email/SMS) versiya |
+| F-004 Drug interaction checker | ⚠️ Keyinga qoldirilgan | Ma'lumot manbai (litsenziya) hal qilinmagan |
+| Admin paneli / PWA frontend | ❌ Mavjud emas | F-001/F-003'dan keyin |
+| `packages/shared-*`, `infra/*` | ⛔ Bo'sh | Monolit yondashuvida hozircha shart emas |
 
 ---
 
-## 2. `core-service` tuzilmasi
+## 5. Xavfsizlik va huquqiy eslatmalar (TZ §6 asosida)
 
-Qavatli (layered) tuzilma tanlandi — har bir turdagi fayl (controller/service/dto/route) o'z papkasida, modullar fayl prefiksi bilan ajratiladi:
-
-```
-apps/core-service/src/
-├── config/            # env, prisma client — umumiy
-├── middleware/         # auth, rbac, validate, error — umumiy
-├── utils/              # jwt, otp, password, refresh-token — umumiy
-├── types/               # express kengaytmalari — umumiy
-├── controllers/         # auth.controller.ts, drug.controller.ts, ...
-├── services/            # auth.service.ts, drug.service.ts, ...
-├── dtos/                # auth.dto.ts, drug.dto.ts, ...
-├── routes/              # auth.routes.ts, drug.routes.ts, ...
-└── server.ts             # barcha routerlarni bu yerda mount qilamiz
-```
-
-Yangi modul qo'shish tartibi: `controllers/`, `services/`, `dtos/`, `routes/` papkalarining har biriga `<nom>.*.ts` faylini `drug` moduli patternida qo'shish, so'ng `server.ts`da `app.use("/api/v1/<nom>", <nom>Router)` bilan ulash. Umumiy `middleware/`, `utils/`, `types/` papkalaridan foydalanish, takrorlamaslik.
+- "Shaxsiy ma'lumotlar to'g'risida"gi qonun (2019) — **data residency O'zbekiston serverlarida** talab qiladi. Hozirgi Supabase (`aws-0-ap-southeast-1`, AWS Singapur) bu talabga **mos emas** — production'ga chiqishdan oldin O'zbekiston/mintaqaviy hosting'ga ko'chirish kerak bo'ladi. MVP/dev bosqichida qabul qilinadi, lekin unutilmasligi kerak
+- OCR rasmlari uchun TZ 30 daqiqalik avto-o'chirish talab qiladi (privacy-by-design) — hozirgi `uploads/prescriptions/` doimiy saqlaydi, bu farq hisobga olinishi kerak
+- 16 yoshgacha ota-ona roziligi talabi — foydalanuvchi ro'yxatdan o'tish oqimida hali tekshirilmaydi
 
 ---
 
-## 3. Admin paneli (frontend)
+## 6. Monetizatsiya (TZ §11, ma'lumot uchun — MVP uchun emas)
 
-**Maqsad**: `ADMINISTRATOR` roli uchun tizimni boshqarish interfeysi.
-
-### Kerakli funksiyalar
-- **Foydalanuvchilar boshqaruvi**: ro'yxatni ko'rish, qidirish, `isActive` orqali bloklash/aktivlashtirish
-- **Shifokor/Administrator provisioning**: hozircha faqat DB orqali qo'lda qilinadi — admin panel uchun bu alohida backend endpoint sifatida yozilishi kerak (masalan `POST /api/v1/auth/users/provision`)
-- **Dorilar katalogi boshqaruvi**: qo'shish/tahrirlash/o'chirish, narx va qoldiq (stock) — `drug` moduli orqali
-- **Retseptlar monitoringi**: barcha retseptlar ro'yxati, status (kutilmoqda/tasdiqlangan/rad etilgan) — `prescription` moduli orqali
-- **Statistika/Dashboard**: kunlik ro'yxatdan o'tishlar, faol foydalanuvchilar, eng ko'p sotilgan dorilar
-- **Audit log**: kim, qachon, nima o'zgartirgani (ayniqsa retsept tasdiqlash/rad etishda muhim)
-
-### Texnik tavsiya
-- **Stack**: React + Next.js (yoki Vite + React), TanStack Query (API cache), Zod (frontend validatsiya — backenddagi bilan bir xil sxema)
-- **Auth**: `access token`ni memory'da, `refresh token`ni httpOnly cookie'da saqlash (localStorage'da JWT saqlash xavfsiz emas)
-- **Himoya**: barcha admin route'lar `Authorization: Bearer <token>` bilan yuboriladi, backendda `authorize(Role.ADMINISTRATOR)` middleware orqali tekshiriladi
-- **UI kit**: shadcn/ui yoki Ant Design (admin panel uchun tez va tayyor komponentlar)
-
-### Admin uchun kerak bo'ladigan yangi backend endpointlar (hali yo'q)
-```
-GET    /api/v1/auth/users                 — barcha foydalanuvchilar ro'yxati (filter: role, isActive)
-PATCH  /api/v1/auth/users/:id/status      — isActive'ni o'zgartirish
-POST   /api/v1/auth/users/provision       — SHIFOKOR/ADMINISTRATOR yaratish (faqat admin)
-GET    /api/v1/drugs                      — dorilar ro'yxati
-POST   /api/v1/drugs                      — yangi dori qo'shish
-PUT    /api/v1/drugs/:id                  — dori tahrirlash
-GET    /api/v1/prescriptions              — barcha retseptlar (admin ko'rinishi)
-```
-
----
-
-## 4. Yozilishi kerak bo'lgan modullar (`core-service` ichida)
-
-### `drug` moduli — ✅ tayyor
-CRUD + qidiruv/filter/sahifalash (`GET /` va `GET /:id` ochiq, yozish amallari `ADMINISTRATOR` roli bilan himoyalangan). `Drug` modeli: `name`, `internationalName` (INN), `manufacturer`, `country`, `dosageForm` (enum), `dosage`, `packageSize`, `barcode` (unique), `price`, `stock`, `requiresPrescription`, `description`, `imageUrl`, `isActive` (soft delete). To'liq API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) § Drug moduli.
-
-### `prescription` moduli — ✅ tayyor
-Bemor retsept rasmini yuklaydi (`multipart/form-data`) → `core-service` uni `ocr-service`ning `/api/ocr/analyze`iga (native `fetch`/`FormData`, `OCR_SERVICE_URL` orqali) yuboradi → natija `Prescription` + `PrescriptionItem[]` sifatida saqlanadi (`PENDING`) → `SHIFOKOR` roli tasdiqlaydi (`PATCH /:id/approve`) yoki sababi bilan rad etadi (`PATCH /:id/reject`). Rasm lokal `uploads/prescriptions/`ga saqlanadi va `/uploads/*` orqali statik xizmat qilinadi. To'liq API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) § Prescription moduli.
-
-### `notification` moduli
-- SMS yuborish — Eskiz.uz integratsiyasi (hozircha `forgot-password` `[SMS STUB]` konsolga chiqaradi, buni real qilish kerak)
-- Push/email (keyingi bosqich)
-
-### `core-service` ↔ `ocr-service` aloqasi — ✅ ulangan
-`prescription` moduli orqali HTTP (native `fetch`) bilan sinxron chaqiriladi, manzil `OCR_SERVICE_URL` env orqali beriladi.
-
----
-
-## 5. Mijoz ilovalari
-
-- **Bemor ilovasi** (mobil yoki veb PWA): ro'yxatdan o'tish/login, retsept rasmini yuklash (OCR'ga), dori qidirish, buyurtma
-- **Shifokor interfeysi**: retseptlarni ko'rish/tasdiqlash/yozish
-
----
-
-## 6. Infratuzilma va DevOps
-
-- [ ] `infra/docker-compose.yml`ni to'ldirish: Postgres, `core-service`, `ocr-service`
-- [ ] Har servis uchun `.env.example` (`core-service`da bor, `ocr-service`da ham bo'lishi kerak) — **muhim: `.env` fayllar hech qachon git'ga commit qilinmasin**
-- [ ] CI/CD pipeline (test + build + deploy)
-- [ ] `infra/k8s` — production uchun manifestlar (keyingi bosqich, MVP uchun shart emas)
-- [ ] Secrets boshqaruvi (production'da `.env` emas — Vault/AWS Secrets Manager/K8s Secrets)
-
----
-
-## 7. Huquqiy/biznes tomon (O'zbekiston uchun)
-
-- Dori retseptlarini masofadan tasdiqlash bo'yicha Sog'liqni saqlash vazirligi talablariga muvofiqlik
-- Shaxsiy tibbiy ma'lumotlar (tashxis, retsept)ni saqlash bo'yicha maxfiylik/qonunchilik talablari
-- SMS integratsiyasi uchun Eskiz.uz (yoki analogik) bilan shartnoma
-
----
-
-## 8. Tavsiya etilgan ustuvorlik tartibi (MVP uchun)
-
-1. ~~`drug` moduli~~ — ✅ tayyor
-2. ~~`prescription` moduli + `ocr-service` bilan HTTP integratsiya~~ — ✅ tayyor
-3. Admin panel — foydalanuvchi va dori boshqaruvi (asosiy funksiyalar), shu jumladan `POST /api/v1/auth/users/provision` (SHIFOKOR/ADMINISTRATOR yaratish)
-4. `notification` moduli — real SMS integratsiyasi
-5. Bemor/Shifokor mijoz ilovalari
-6. Infra qattiqlashtirish (docker-compose to'liq, keyin k8s)
+Freemium (Bemor, bepul/15,000 UZS/oy), Shifokor PRO (35,000 UZS/oy), Apteka Partner (50,000 UZS/oy/apteka — panel+API, **sotib olish emas**), Korporativ/Government. MVP bosqichida monetizatsiya qurilmaydi, faqat kelajakdagi yo'nalish sifatida qayd etiladi.
