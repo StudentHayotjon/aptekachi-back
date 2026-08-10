@@ -18,5 +18,6 @@ export const env = {
     },
     passwordReset: {
         codeTtlMinutes: 10
-    }
+    },
+    ocrServiceUrl: process.env.OCR_SERVICE_URL ?? "http://localhost:3000"
 } as const;

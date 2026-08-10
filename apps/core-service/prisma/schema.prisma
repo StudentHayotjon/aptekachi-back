@@ -15,16 +15,18 @@ enum Role {
 }
 
 model User {
-  id                  String               @id @default(uuid())
-  phone               String               @unique
-  passwordHash        String
-  fullName            String
-  role                Role                 @default(BEMOR)
-  isActive            Boolean              @default(true)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  refreshTokens       RefreshToken[]
-  passwordResetTokens PasswordResetToken[]
+  id                    String               @id @default(uuid())
+  phone                 String               @unique
+  passwordHash          String
+  fullName              String
+  role                  Role                 @default(BEMOR)
+  isActive              Boolean              @default(true)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  refreshTokens         RefreshToken[]
+  passwordResetTokens   PasswordResetToken[]
+  patientPrescriptions  Prescription[]       @relation("PatientPrescriptions")
+  doctorPrescriptions   Prescription[]       @relation("DoctorPrescriptions")
 
   @@map("users")
 }
@@ -84,7 +86,62 @@ model Drug {
   isActive             Boolean    @default(true) // sotuvdan olib tashlangan bo'lsa false (soft delete)
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
+  prescriptionItems    PrescriptionItem[]
 
   @@index([name])
   @@map("drugs")
+}
+
+enum PrescriptionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Prescription {
+  id           String             @id @default(uuid())
+  patientId    String
+  patient      User               @relation("PatientPrescriptions", fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId     String?
+  doctor       User?              @relation("DoctorPrescriptions", fields: [doctorId], references: [id])
+  imageUrl     String // yuklangan retsept rasmi (/uploads/prescriptions/...)
+  status       PrescriptionStatus @default(PENDING)
+  rejectReason String?
+  reviewedAt   DateTime?
+  items        PrescriptionItem[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([status])
+  @@map("prescriptions")
+}
+
+// Har bir yozuv — ocr-service'ning DMED retsept OCR natijasidagi bitta dori qatoriga mos keladi.
+// Maydon nomlari OCR javobidagi (`retseptlar[]`) o'zbekcha kalitlarga bevosita mos keltirilgan —
+// OCR'dan kelgan ma'lumot hech qanday yo'qotishsiz saqlanishi uchun.
+model PrescriptionItem {
+  id             String       @id @default(uuid())
+  prescriptionId String
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  retseptId      String? // DMED retsept ID (masalan MAB1361987)
+  himoyaKodi     String?
+  bemorFish      String?
+  bemorYosh      String?
+  shifokorFish   String? // retseptga qo'lda yozilgan shifokor ismi (User'ga bog'lanmagan, faqat matn)
+  drugId         String?
+  drug           Drug?        @relation(fields: [drugId], references: [id])
+  drugNameRaw    String // OCR: dori_nomi_xpn — bazada mos dori topilmasa ham saqlanadi
+  releaseForm    String? // OCR: chiqarilish_shakli
+  usageMethod    String? // OCR: qabul_qilish_usuli
+  dailyDoseCount String? // OCR: kunlik_qabul_soni
+  duration       String? // OCR: davomiyligi
+  regimen        String? // OCR: qabul_tartibi
+  totalQuantity  String? // OCR: umumiy_miqdori
+  note           String? // OCR: izoh
+  validUntil     String? // OCR: amal_qilish_muddati
+
+  @@index([prescriptionId])
+  @@map("prescription_items")
 }

@@ -8,7 +8,7 @@ Ushbu hujjat loyihaning hozirgi holatini va admin paneli bilan birga to'liq tizi
 
 | Qism | Holati | Izoh |
 |---|---|---|
-| `apps/core-service` | ✅ Ishlab turibdi | Modular monolit (qavatli tuzilma: `controllers/`, `services/`, `dtos/`, `routes/`). `auth` va `drug` modullari to'liq ishlaydi. Port: **3001**. API hujjati: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) |
+| `apps/core-service` | ✅ Ishlab turibdi | Modular monolit (qavatli tuzilma: `controllers/`, `services/`, `dtos/`, `routes/`). `auth`, `drug` va `prescription` modullari to'liq ishlaydi. Port: **3001**. API hujjati: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) |
 | `apps/ocr-service` | ✅ Kod bor | Gemini asosida retsept rasmidan matn ajratib olish, alohida servis. Port: **3000** |
 | `packages/shared-types` | ⛔ Bo'sh | Endi shart emas — monolit ichida bitta `@prisma/client` va umumiy tiplar bitta joyda |
 | `packages/shared-config` | ⛔ Bo'sh | Endi shart emas (monolitda bitta `env.config.ts`) |
@@ -79,18 +79,15 @@ GET    /api/v1/prescriptions              — barcha retseptlar (admin ko'rinish
 ### `drug` moduli — ✅ tayyor
 CRUD + qidiruv/filter/sahifalash (`GET /` va `GET /:id` ochiq, yozish amallari `ADMINISTRATOR` roli bilan himoyalangan). `Drug` modeli: `name`, `internationalName` (INN), `manufacturer`, `country`, `dosageForm` (enum), `dosage`, `packageSize`, `barcode` (unique), `price`, `stock`, `requiresPrescription`, `description`, `imageUrl`, `isActive` (soft delete). To'liq API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) § Drug moduli.
 
-### `prescription` moduli
-- Retsept yaratish (shifokor tomonidan yoki OCR natijasidan)
-- `ocr-service`'dan kelgan matnni tuzilgan retsept ma'lumotiga aylantirish
-- Status oqimi: `PENDING → APPROVED/REJECTED`
-- Shifokor tasdiqlash endpointlari (RBAC: faqat `SHIFOKOR`)
+### `prescription` moduli — ✅ tayyor
+Bemor retsept rasmini yuklaydi (`multipart/form-data`) → `core-service` uni `ocr-service`ning `/api/ocr/analyze`iga (native `fetch`/`FormData`, `OCR_SERVICE_URL` orqali) yuboradi → natija `Prescription` + `PrescriptionItem[]` sifatida saqlanadi (`PENDING`) → `SHIFOKOR` roli tasdiqlaydi (`PATCH /:id/approve`) yoki sababi bilan rad etadi (`PATCH /:id/reject`). Rasm lokal `uploads/prescriptions/`ga saqlanadi va `/uploads/*` orqali statik xizmat qilinadi. To'liq API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) § Prescription moduli.
 
 ### `notification` moduli
 - SMS yuborish — Eskiz.uz integratsiyasi (hozircha `forgot-password` `[SMS STUB]` konsolga chiqaradi, buni real qilish kerak)
 - Push/email (keyingi bosqich)
 
-### `core-service` ↔ `ocr-service` aloqasi
-Ikkita alohida servis qolgani uchun ular orasida HTTP orqali sinxron aloqa kerak bo'ladi: `prescription` moduli retsept rasmini qabul qilganda `ocr-service`ning `/api/ocr/analyze` endpointiga so'rov yuboradi, natijani qabul qilib tuzilgan retsept sifatida saqlaydi. Servis manzili env orqali beriladi (`OCR_SERVICE_URL`).
+### `core-service` ↔ `ocr-service` aloqasi — ✅ ulangan
+`prescription` moduli orqali HTTP (native `fetch`) bilan sinxron chaqiriladi, manzil `OCR_SERVICE_URL` env orqali beriladi.
 
 ---
 
@@ -122,8 +119,8 @@ Ikkita alohida servis qolgani uchun ular orasida HTTP orqali sinxron aloqa kerak
 ## 8. Tavsiya etilgan ustuvorlik tartibi (MVP uchun)
 
 1. ~~`drug` moduli~~ — ✅ tayyor
-2. `prescription` moduli + `ocr-service` bilan HTTP integratsiya
-3. Admin panel — foydalanuvchi va dori boshqaruvi (asosiy funksiyalar)
+2. ~~`prescription` moduli + `ocr-service` bilan HTTP integratsiya~~ — ✅ tayyor
+3. Admin panel — foydalanuvchi va dori boshqaruvi (asosiy funksiyalar), shu jumladan `POST /api/v1/auth/users/provision` (SHIFOKOR/ADMINISTRATOR yaratish)
 4. `notification` moduli — real SMS integratsiyasi
 5. Bemor/Shifokor mijoz ilovalari
 6. Infra qattiqlashtirish (docker-compose to'liq, keyin k8s)

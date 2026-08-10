@@ -197,8 +197,6 @@ Muvaffaqiyatli reset'dan so'ng foydalanuvchining **barcha refresh tokenlari beko
 
 ---
 
----
-
 # Drug moduli (`/api/v1/drugs`)
 
 Base URL: `http://localhost:3001/api/v1/drugs`
@@ -301,6 +299,105 @@ Tahrirlash — barcha maydonlar ixtiyoriy (`POST` sxemasining `.partial()`). **A
 Soft delete — `isActive: false` qilib qo'yadi, DB'dan o'chirmaydi. **Auth: JWT + `ADMINISTRATOR` roli.**
 
 **Response — 200 OK**: `{ "success": true, "message": "Dori o'chirildi" }`
+
+---
+
+# Prescription moduli (`/api/v1/prescriptions`)
+
+Base URL: `http://localhost:3001/api/v1/prescriptions`
+
+Retsept rasmini qabul qiladi, `ocr-service`ning `/api/ocr/analyze` endpointi orqali (native `fetch`/`FormData` bilan, `OCR_SERVICE_URL` env orqali) matnni tuzilgan ma'lumotga aylantiradi va saqlaydi. Shifokor keyin tasdiqlaydi yoki rad etadi.
+
+## 13. `POST /`
+
+Retsept rasmini yuklash. **Auth: JWT + `BEMOR` roli.**
+
+**Request**: `multipart/form-data`, maydon nomi — `file` (rasm, JPEG/PNG/WEBP, maks. 10MB).
+
+**Response — 201 Created**
+
+```json
+{
+  "success": true,
+  "message": "Retsept qabul qilindi, ko'rib chiqilmoqda",
+  "data": {
+    "id": "uuid",
+    "patientId": "uuid",
+    "doctorId": null,
+    "imageUrl": "/uploads/prescriptions/f1e2...jpg",
+    "status": "PENDING",
+    "rejectReason": null,
+    "reviewedAt": null,
+    "items": [
+      {
+        "id": "uuid",
+        "retseptId": "MAB1361987",
+        "himoyaKodi": "...",
+        "bemorFish": "...",
+        "bemorYosh": "...",
+        "shifokorFish": "...",
+        "drugId": null,
+        "drugNameRaw": "Paracetamol 500mg",
+        "releaseForm": "tabletka",
+        "usageMethod": "ichishga",
+        "dailyDoseCount": "2",
+        "duration": "5 kun",
+        "regimen": "ovqatdan keyin",
+        "totalQuantity": "10",
+        "note": null,
+        "validUntil": "..."
+      }
+    ],
+    "createdAt": "2026-08-10T18:00:00.000Z",
+    "updatedAt": "2026-08-10T18:00:00.000Z"
+  }
+}
+```
+
+`items[]` maydonlari `ocr-service`ning DMED retsept OCR javobidagi o'zbekcha kalitlarga bevosita mos keladi — ma'lumot yo'qotilmasdan saqlanadi. `drugId` avtomatik bog'lanmaydi (hozircha `null`) — `drugNameRaw` xom OCR matni sifatida saqlanadi.
+
+**Xatoliklar**
+| Status | Sabab |
+|--------|-------|
+| 400 | Fayl yuklanmadi yoki rasm formatida emas |
+| 401 / 403 | Auth yo'q yoki `BEMOR` emas |
+| 422 | Rasmdan retsept ma'lumotlari aniqlanmadi (OCR bo'sh natija qaytardi) |
+| 502 | `ocr-service`ga ulanib bo'lmadi yoki u xato qaytardi |
+
+## 14. `GET /`
+
+Ro'yxat. **Auth: JWT** (istalgan rol).
+
+- `BEMOR` — faqat o'ziga tegishli retseptlarni ko'radi (`patientId` avtomatik filtrlanadi)
+- `SHIFOKOR` / `ADMINISTRATOR` — barcha retseptlarni ko'radi
+
+**Query parametrlari**: `status` (`PENDING`/`APPROVED`/`REJECTED`), `page` (default `1`), `limit` (default `20`, maks `100`).
+
+**Response — 200 OK** — `{ items: Prescription[], total, page, limit }` (`POST /` bilan bir xil `Prescription` shakli).
+
+## 15. `GET /:id`
+
+Bitta retsept. **Auth: JWT.** `BEMOR` faqat o'ziniki bo'lsa ko'ra oladi (`403` aks holda).
+
+**Xatoliklar**: `404` topilmadi, `403` boshqa bemorning retsepti.
+
+## 16. `PATCH /:id/approve`
+
+Retseptni tasdiqlaydi (`status: APPROVED`, `doctorId` = joriy shifokor). **Auth: JWT + `SHIFOKOR` roli.**
+
+**Xatoliklar**: `404` topilmadi, `409` — retsept allaqachon `PENDING` holatida emas (qayta ko'rib chiqib bo'lmaydi).
+
+## 17. `PATCH /:id/reject`
+
+Retseptni rad etadi. **Auth: JWT + `SHIFOKOR` roli.**
+
+**Request body**
+
+```json
+{ "reason": "Dozasi noaniq, qayta yuklang" }
+```
+
+**Xatoliklar**: `400` validatsiya (`reason` bo'sh), `404` topilmadi, `409` allaqachon ko'rib chiqilgan.
 
 ---
 
