@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { ApiResponse } from "../modules/auth/auth.dto";
+import { ApiResponse } from "../dtos/auth.dto";
 import { AccessTokenPayload } from "../utils/jwt.util";
 
 export type ReqType<

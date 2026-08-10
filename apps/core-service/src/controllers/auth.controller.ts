@@ -1,8 +1,8 @@
 import { NextFunction } from "express";
-import { AuthService } from "./auth.service";
-import { AuthResponse, AuthUserResponse, ForgotPasswordDto, LoginDto, RefreshDto, RegisterDto, ResetPasswordDto } from "./auth.dto";
-import { AuthedRequest, ReqType, ResType } from "../../types/express.types";
-import { AppError } from "../../utils/app-error.util";
+import { AuthService } from "../services/auth.service";
+import { AuthResponse, AuthUserResponse, ForgotPasswordDto, LoginDto, RefreshDto, RegisterDto, ResetPasswordDto } from "../dtos/auth.dto";
+import { AuthedRequest, ReqType, ResType } from "../types/express.types";
+import { AppError } from "../utils/app-error.util";
 
 export class AuthController {
     public static async register(req: ReqType<unknown, RegisterDto>, res: ResType<AuthResponse>, next: NextFunction): Promise<void> {

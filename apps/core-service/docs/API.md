@@ -197,6 +197,113 @@ Muvaffaqiyatli reset'dan so'ng foydalanuvchining **barcha refresh tokenlari beko
 
 ---
 
+---
+
+# Drug moduli (`/api/v1/drugs`)
+
+Base URL: `http://localhost:3001/api/v1/drugs`
+
+## 8. `GET /`
+
+Dorilar ro'yxati (faqat `isActive: true` bo'lganlar, agar `isActive` query orqali boshqacha berilmasa). Auth talab qilinmaydi.
+
+**Query parametrlari**
+
+| Param | Turi | Izoh |
+|---|---|---|
+| `search` | string | `name` yoki `internationalName` bo'yicha qidiruv (case-insensitive) |
+| `dosageForm` | enum | `TABLETKA`, `KAPSULA`, `SIROP`, `INYEKSIYA`, `MALHAM`, `TOMCHI`, `SPREY`, `BOSHQA` |
+| `requiresPrescription` | boolean | |
+| `isActive` | boolean | default: `true` |
+| `page` | number | default: `1` |
+| `limit` | number | default: `20`, max `100` |
+
+**Response — 200 OK**
+
+```json
+{
+  "success": true,
+  "message": "OK",
+  "data": {
+    "items": [
+      {
+        "id": "uuid",
+        "name": "Paracetamol Extra",
+        "internationalName": "Paracetamol",
+        "manufacturer": "Nobel Pharma",
+        "country": "O'zbekiston",
+        "dosageForm": "TABLETKA",
+        "dosage": "500mg",
+        "packageSize": "20 tabletka/quti",
+        "barcode": "4780123456789",
+        "price": 15000,
+        "stock": 120,
+        "requiresPrescription": false,
+        "description": null,
+        "imageUrl": null,
+        "isActive": true,
+        "createdAt": "2026-07-28T10:00:00.000Z",
+        "updatedAt": "2026-07-28T10:00:00.000Z"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+## 9. `GET /:id`
+
+Bitta dori. Auth talab qilinmaydi.
+
+**Xatoliklar**: `404` — dori topilmadi yoki `isActive: false`.
+
+## 10. `POST /`
+
+Yangi dori qo'shish. **Auth: JWT + `ADMINISTRATOR` roli.**
+
+**Request body** — `dosageForm`, `stock`, `requiresPrescription` majburiy emas (default qiymatlar bor), qolganlaridan `name`, `manufacturer`, `price` majburiy:
+
+```json
+{
+  "name": "Paracetamol Extra",
+  "internationalName": "Paracetamol",
+  "manufacturer": "Nobel Pharma",
+  "country": "O'zbekiston",
+  "dosageForm": "TABLETKA",
+  "dosage": "500mg",
+  "packageSize": "20 tabletka/quti",
+  "barcode": "4780123456789",
+  "price": 15000,
+  "stock": 120,
+  "requiresPrescription": false
+}
+```
+
+**Response — 201 Created** — yaratilgan dori obyekti (`GET /:id` bilan bir xil shakl).
+
+**Xatoliklar**
+| Status | Sabab |
+|--------|-------|
+| 400 | Validatsiya xatosi |
+| 401 / 403 | Auth yo'q yoki `ADMINISTRATOR` emas |
+| 409 | Shu `barcode` bilan dori allaqachon mavjud |
+
+## 11. `PUT /:id`
+
+Tahrirlash — barcha maydonlar ixtiyoriy (`POST` sxemasining `.partial()`). **Auth: JWT + `ADMINISTRATOR` roli.**
+
+**Xatoliklar**: `400` validatsiya, `401/403` auth, `404` dori topilmadi.
+
+## 12. `DELETE /:id`
+
+Soft delete — `isActive: false` qilib qo'yadi, DB'dan o'chirmaydi. **Auth: JWT + `ADMINISTRATOR` roli.**
+
+**Response — 200 OK**: `{ "success": true, "message": "Dori o'chirildi" }`
+
+---
+
 ## Umumiy xato javob shakli
 
 Validatsiya (400) va boshqa xatolar (401/403/404/409/500) uchun:

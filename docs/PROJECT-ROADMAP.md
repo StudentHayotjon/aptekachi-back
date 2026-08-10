@@ -8,7 +8,7 @@ Ushbu hujjat loyihaning hozirgi holatini va admin paneli bilan birga to'liq tizi
 
 | Qism | Holati | Izoh |
 |---|---|---|
-| `apps/core-service` | ✅ Ishlab turibdi | Modular monolit. Hozircha `auth` moduli to'liq ishlaydi (JWT auth, RBAC, refresh token rotation). Port: **3001**. API hujjati: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) |
+| `apps/core-service` | ✅ Ishlab turibdi | Modular monolit (qavatli tuzilma: `controllers/`, `services/`, `dtos/`, `routes/`). `auth` va `drug` modullari to'liq ishlaydi. Port: **3001**. API hujjati: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) |
 | `apps/ocr-service` | ✅ Kod bor | Gemini asosida retsept rasmidan matn ajratib olish, alohida servis. Port: **3000** |
 | `packages/shared-types` | ⛔ Bo'sh | Endi shart emas — monolit ichida bitta `@prisma/client` va umumiy tiplar bitta joyda |
 | `packages/shared-config` | ⛔ Bo'sh | Endi shart emas (monolitda bitta `env.config.ts`) |
@@ -24,19 +24,22 @@ Ushbu hujjat loyihaning hozirgi holatini va admin paneli bilan birga to'liq tizi
 
 ## 2. `core-service` tuzilmasi
 
+Qavatli (layered) tuzilma tanlandi — har bir turdagi fayl (controller/service/dto/route) o'z papkasida, modullar fayl prefiksi bilan ajratiladi:
+
 ```
 apps/core-service/src/
 ├── config/            # env, prisma client — umumiy
 ├── middleware/         # auth, rbac, validate, error — umumiy
 ├── utils/              # jwt, otp, password, refresh-token — umumiy
 ├── types/               # express kengaytmalari — umumiy
-├── modules/
-│   └── auth/            # controller, service, routes, dto — bitta domenga tegishli hammasi bir joyda
-│       # keyingi bosqichda: modules/drug/, modules/prescription/, modules/notification/
-└── server.ts             # barcha modul routerlarini bu yerda mount qilamiz
+├── controllers/         # auth.controller.ts, drug.controller.ts, ...
+├── services/            # auth.service.ts, drug.service.ts, ...
+├── dtos/                # auth.dto.ts, drug.dto.ts, ...
+├── routes/              # auth.routes.ts, drug.routes.ts, ...
+└── server.ts             # barcha routerlarni bu yerda mount qilamiz
 ```
 
-Yangi modul qo'shish tartibi: `src/modules/<nom>/` papkasini `auth` moduli patternida yaratish (`*.controller.ts`, `*.service.ts`, `*.routes.ts`, `*.dto.ts`), so'ng `server.ts`da `app.use("/api/v1/<nom>", <nom>Router)` bilan ulash. Umumiy `middleware/`, `utils/`, `types/` papkalaridan foydalanish, takrorlamaslik.
+Yangi modul qo'shish tartibi: `controllers/`, `services/`, `dtos/`, `routes/` papkalarining har biriga `<nom>.*.ts` faylini `drug` moduli patternida qo'shish, so'ng `server.ts`da `app.use("/api/v1/<nom>", <nom>Router)` bilan ulash. Umumiy `middleware/`, `utils/`, `types/` papkalaridan foydalanish, takrorlamaslik.
 
 ---
 
@@ -73,10 +76,8 @@ GET    /api/v1/prescriptions              — barcha retseptlar (admin ko'rinish
 
 ## 4. Yozilishi kerak bo'lgan modullar (`core-service` ichida)
 
-### `drug` moduli
-- Dorilar katalogi: nomi, ishlab chiqaruvchi, narx, qoldiq, retsept talab qiladimi (`requiresPrescription: boolean`)
-- Qidiruv/filter API
-- Prisma schema'ga yangi model qo'shiladi (bitta umumiy DB/schema, `auth` moduli bilan bir xil Prisma client)
+### `drug` moduli — ✅ tayyor
+CRUD + qidiruv/filter/sahifalash (`GET /` va `GET /:id` ochiq, yozish amallari `ADMINISTRATOR` roli bilan himoyalangan). `Drug` modeli: `name`, `internationalName` (INN), `manufacturer`, `country`, `dosageForm` (enum), `dosage`, `packageSize`, `barcode` (unique), `price`, `stock`, `requiresPrescription`, `description`, `imageUrl`, `isActive` (soft delete). To'liq API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) § Drug moduli.
 
 ### `prescription` moduli
 - Retsept yaratish (shifokor tomonidan yoki OCR natijasidan)
@@ -120,7 +121,7 @@ Ikkita alohida servis qolgani uchun ular orasida HTTP orqali sinxron aloqa kerak
 
 ## 8. Tavsiya etilgan ustuvorlik tartibi (MVP uchun)
 
-1. `drug` moduli — oddiy CRUD, tez yoziladi, `core-service` ichida
+1. ~~`drug` moduli~~ — ✅ tayyor
 2. `prescription` moduli + `ocr-service` bilan HTTP integratsiya
 3. Admin panel — foydalanuvchi va dori boshqaruvi (asosiy funksiyalar)
 4. `notification` moduli — real SMS integratsiyasi
