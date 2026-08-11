@@ -324,7 +324,9 @@ Retsept rasmini yuklash. **Auth: JWT + `BEMOR` roli.**
     "id": "uuid",
     "patientId": "uuid",
     "doctorId": null,
+    "source": "OCR",
     "imageUrl": "/uploads/prescriptions/f1e2...jpg",
+    "dmedUuid": null,
     "status": "PENDING",
     "rejectReason": null,
     "reviewedAt": null,
@@ -364,7 +366,29 @@ Retsept rasmini yuklash. **Auth: JWT + `BEMOR` roli.**
 | 422 | Rasmdan retsept ma'lumotlari aniqlanmadi (OCR bo'sh natija qaytardi) |
 | 502 | `ocr-service`ga ulanib bo'lmadi yoki u xato qaytardi |
 
-## 14. `GET /`
+## 14. `POST /dmed`
+
+dmed davlat tizimidan QR-kod orqali retsept import qilish (F-001). **Auth: JWT + `BEMOR` roli.**
+
+> **Hozircha mock**: real `api.dmed.uz` ulanishi yo'q (hamkorlik muzokara jarayonida). `DmedAdapter` interfeysi orqali `MockDmedAdapter` chaqiriladi — har qanday UUID uchun taxminiy (lekin barqaror) retsept ma'lumoti qaytaradi. `DMED_MODE=real`ga o'tkazilganda (real adapter implementatsiya qilingach) xatti-harakat avtomatik almashadi, boshqa hech narsa o'zgarmaydi.
+
+**Request body**
+
+```json
+{ "uuid": "b3f1c2a0-1234-4abc-9def-0123456789ab" }
+```
+
+**Response — 201 Created** — `POST /` bilan bir xil `Prescription` shakli, farqlar: `source: "DMED_QR"`, `dmedUuid` to'ldirilgan, `imageUrl: null`, **`status` darhol `APPROVED`** (dmed retsepti allaqachon shifokor tomonidan rasmiylashtirilgan va raqamli imzolangan deb hisoblanadi — qayta tasdiqlash shart emas, OCR manbasidan farqli o'laroq).
+
+**Xatoliklar**
+| Status | Sabab |
+|--------|-------|
+| 400 | Validatsiya xatosi (`uuid` bo'sh) |
+| 401 / 403 | Auth yo'q yoki `BEMOR` emas |
+| 404 | dmed tizimida bunday UUID topilmadi |
+| 409 | Bu dmed retsepti (`dmedUuid`) allaqachon import qilingan |
+
+## 15. `GET /`
 
 Ro'yxat. **Auth: JWT** (istalgan rol).
 
@@ -375,19 +399,19 @@ Ro'yxat. **Auth: JWT** (istalgan rol).
 
 **Response — 200 OK** — `{ items: Prescription[], total, page, limit }` (`POST /` bilan bir xil `Prescription` shakli).
 
-## 15. `GET /:id`
+## 16. `GET /:id`
 
 Bitta retsept. **Auth: JWT.** `BEMOR` faqat o'ziniki bo'lsa ko'ra oladi (`403` aks holda).
 
 **Xatoliklar**: `404` topilmadi, `403` boshqa bemorning retsepti.
 
-## 16. `PATCH /:id/approve`
+## 17. `PATCH /:id/approve`
 
-Retseptni tasdiqlaydi (`status: APPROVED`, `doctorId` = joriy shifokor). **Auth: JWT + `SHIFOKOR` roli.**
+Retseptni tasdiqlaydi (`status: APPROVED`, `doctorId` = joriy shifokor). **Auth: JWT + `SHIFOKOR` roli.** (Faqat `OCR` manbali retseptlar uchun amaliy — `DMED_QR` retseptlari import paytida darhol tasdiqlangan bo'ladi, shuning uchun `409` qaytaradi.)
 
 **Xatoliklar**: `404` topilmadi, `409` — retsept allaqachon `PENDING` holatida emas (qayta ko'rib chiqib bo'lmaydi).
 
-## 17. `PATCH /:id/reject`
+## 18. `PATCH /:id/reject`
 
 Retseptni rad etadi. **Auth: JWT + `SHIFOKOR` roli.**
 

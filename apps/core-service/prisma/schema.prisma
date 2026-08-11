@@ -98,19 +98,26 @@ enum PrescriptionStatus {
   REJECTED
 }
 
+enum PrescriptionSource {
+  OCR // aptekachek/qog'oz retsept rasmidan (F-002)
+  DMED_QR // dmed davlat tizimidan QR orqali (F-001) — hozircha mock adapter
+}
+
 model Prescription {
-  id           String             @id @default(uuid())
+  id           String              @id @default(uuid())
   patientId    String
-  patient      User               @relation("PatientPrescriptions", fields: [patientId], references: [id], onDelete: Cascade)
+  patient      User                @relation("PatientPrescriptions", fields: [patientId], references: [id], onDelete: Cascade)
   doctorId     String?
-  doctor       User?              @relation("DoctorPrescriptions", fields: [doctorId], references: [id])
-  imageUrl     String // yuklangan retsept rasmi (/uploads/prescriptions/...)
-  status       PrescriptionStatus @default(PENDING)
+  doctor       User?               @relation("DoctorPrescriptions", fields: [doctorId], references: [id])
+  source       PrescriptionSource  @default(OCR)
+  imageUrl     String? // yuklangan retsept rasmi (/uploads/prescriptions/...) — DMED_QR manbasida yo'q
+  dmedUuid     String?             @unique // dmed retsept UUID (faqat DMED_QR manbasida)
+  status       PrescriptionStatus  @default(PENDING)
   rejectReason String?
   reviewedAt   DateTime?
   items        PrescriptionItem[]
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 
   @@index([patientId])
   @@index([doctorId])

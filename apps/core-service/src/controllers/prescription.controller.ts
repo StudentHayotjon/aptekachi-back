@@ -1,6 +1,12 @@
 import { NextFunction } from "express";
 import { PrescriptionService } from "../services/prescription.service";
-import { listPrescriptionQuerySchema, PrescriptionListResponse, PrescriptionResponse, RejectPrescriptionDto } from "../dtos/prescription.dto";
+import {
+    DmedImportDto,
+    listPrescriptionQuerySchema,
+    PrescriptionListResponse,
+    PrescriptionResponse,
+    RejectPrescriptionDto
+} from "../dtos/prescription.dto";
 import { AuthedRequest, ResType } from "../types/express.types";
 import { AppError } from "../utils/app-error.util";
 
@@ -15,6 +21,22 @@ export class PrescriptionController {
             }
             const result = await PrescriptionService.create(req.user.sub, req.file);
             res.status(201).json({ success: true, message: "Retsept qabul qilindi, ko'rib chiqilmoqda", data: result });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    public static async importFromDmed(
+        req: AuthedRequest<unknown, DmedImportDto>,
+        res: ResType<PrescriptionResponse>,
+        next: NextFunction
+    ): Promise<void> {
+        try {
+            if (!req.user) {
+                throw new AppError(401, "Avtorizatsiyadan o'tilmagan");
+            }
+            const result = await PrescriptionService.importFromDmed(req.user.sub, req.body.uuid);
+            res.status(201).json({ success: true, message: "Retsept dmed'dan import qilindi", data: result });
         } catch (error) {
             next(error);
         }

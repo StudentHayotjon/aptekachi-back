@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PrescriptionStatus } from "@prisma/client";
+import { PrescriptionSource, PrescriptionStatus } from "@prisma/client";
 
 export const listPrescriptionQuerySchema = z.object({
     status: z.nativeEnum(PrescriptionStatus).optional(),
@@ -11,8 +11,13 @@ export const rejectPrescriptionSchema = z.object({
     reason: z.string().min(3, "Rad etish sababi ko'rsatilishi kerak").max(500)
 });
 
+export const dmedImportSchema = z.object({
+    uuid: z.string().min(1, "dmed retsept UUID ko'rsatilishi kerak")
+});
+
 export type ListPrescriptionQueryDto = z.infer<typeof listPrescriptionQuerySchema>;
 export type RejectPrescriptionDto = z.infer<typeof rejectPrescriptionSchema>;
+export type DmedImportDto = z.infer<typeof dmedImportSchema>;
 
 export interface PrescriptionItemResponse {
     id: string;
@@ -37,7 +42,9 @@ export interface PrescriptionResponse {
     id: string;
     patientId: string;
     doctorId: string | null;
-    imageUrl: string;
+    source: PrescriptionSource;
+    imageUrl: string | null;
+    dmedUuid: string | null;
     status: PrescriptionStatus;
     rejectReason: string | null;
     reviewedAt: Date | null;

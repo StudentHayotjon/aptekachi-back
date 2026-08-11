@@ -6,6 +6,7 @@ import { prisma } from "../config/prisma.client";
 import { env } from "../config/env.config";
 import { AppError } from "../utils/app-error.util";
 import { ListPrescriptionQueryDto, PrescriptionListResponse, PrescriptionResponse, RejectPrescriptionDto } from "../dtos/prescription.dto";
+import { getDmedAdapter } from "../integrations/dmed/dmed.adapter";
 
 const UPLOAD_DIR = path.join(__dirname, "..", "..", "uploads", "prescriptions");
 
@@ -39,7 +40,9 @@ const toPrescriptionResponse = (prescription: PrescriptionWithItems): Prescripti
     id: prescription.id,
     patientId: prescription.patientId,
     doctorId: prescription.doctorId,
+    source: prescription.source,
     imageUrl: prescription.imageUrl,
+    dmedUuid: prescription.dmedUuid,
     status: prescription.status,
     rejectReason: prescription.rejectReason,
     reviewedAt: prescription.reviewedAt,
@@ -121,6 +124,48 @@ export class PrescriptionService {
                         totalQuantity: item.umumiy_miqdori,
                         note: item.izoh,
                         validUntil: item.amal_qilish_muddati
+                    }))
+                }
+            },
+            include: { items: true }
+        });
+
+        return toPrescriptionResponse(prescription);
+    }
+
+    public static async importFromDmed(patientId: string, uuid: string): Promise<PrescriptionResponse> {
+        const existing = await prisma.prescription.findUnique({ where: { dmedUuid: uuid } });
+        if (existing) {
+            throw new AppError(409, "Bu dmed retsepti allaqachon import qilingan");
+        }
+
+        const dmedData = await getDmedAdapter().fetchPrescription(uuid);
+        if (!dmedData) {
+            throw new AppError(404, "dmed tizimida bunday retsept topilmadi");
+        }
+
+        const prescription = await prisma.prescription.create({
+            data: {
+                patientId,
+                source: "DMED_QR",
+                dmedUuid: uuid,
+                status: PrescriptionStatus.APPROVED, // dmed retsepti allaqachon shifokor tomonidan rasmiylashtirilgan va imzolangan
+                reviewedAt: new Date(),
+                items: {
+                    create: dmedData.items.map((item) => ({
+                        himoyaKodi: dmedData.himoyaKodi,
+                        bemorFish: dmedData.bemorFish,
+                        bemorYosh: dmedData.bemorYosh,
+                        shifokorFish: dmedData.shifokorFish,
+                        drugNameRaw: item.drugNameRaw,
+                        releaseForm: item.releaseForm,
+                        usageMethod: item.usageMethod,
+                        dailyDoseCount: item.dailyDoseCount,
+                        duration: item.duration,
+                        regimen: item.regimen,
+                        totalQuantity: item.totalQuantity,
+                        note: item.note,
+                        validUntil: dmedData.validUntil
                     }))
                 }
             },

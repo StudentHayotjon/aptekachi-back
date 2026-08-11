@@ -66,13 +66,16 @@ To'liq API hujjati: [`docs/API.md`](docs/API.md) — `auth` moduli (`/api/v1/aut
 
 | Method | Path | Auth | Tavsif |
 |---|---|---|---|
-| POST | `/` | JWT + `BEMOR` | Retsept rasmini yuklash (`multipart/form-data`, maydon: `file`) — `ocr-service`ga yuboriladi, natija saqlanadi, status `PENDING` |
+| POST | `/` | JWT + `BEMOR` | Retsept rasmini yuklash (`multipart/form-data`, maydon: `file`) — `ocr-service`ga yuboriladi, natija saqlanadi, status `PENDING` (F-002) |
+| POST | `/dmed` | JWT + `BEMOR` | dmed QR retsept import (F-001) — `{ uuid }` qabul qiladi, status darhol `APPROVED` |
 | GET | `/` | JWT | Ro'yxat (Bemor faqat o'zinikini, Shifokor/Admin — hammasini; filter: `status`, sahifalash: `page`, `limit`) |
 | GET | `/:id` | JWT | Bitta retsept (Bemor faqat o'zinikini ko'ra oladi) |
-| PATCH | `/:id/approve` | JWT + `SHIFOKOR` | Retseptni tasdiqlash |
+| PATCH | `/:id/approve` | JWT + `SHIFOKOR` | Retseptni tasdiqlash (faqat `OCR` manbali, `PENDING` retseptlar uchun) |
 | PATCH | `/:id/reject` | JWT + `SHIFOKOR` | Retseptni rad etish (`reason` majburiy) |
 
-`Prescription` → `PrescriptionItem[]` (bitta retsept rasmida bir nechta dori qatori bo'lishi mumkin, DMED formatiga mos). `PrescriptionItem` maydonlari `ocr-service`ning `/api/ocr/analyze` javobidagi (`retseptlar[]`) o'zbekcha kalitlarga bevosita mos keladi — ma'lumot yo'qotilmasligi uchun.
+`Prescription` ikki manbadan biriga ega bo'ladi (`source`): **`OCR`** — retsept rasmi yuklanib, shifokor tasdiqlashi kerak (`PENDING → APPROVED/REJECTED`); **`DMED_QR`** — dmed davlat tizimidan QR orqali import qilinadi, allaqachon rasmiy tasdiqlangan hisoblanib, darhol `APPROVED` bo'ladi (qayta tasdiqlash shart emas). `Prescription` → `PrescriptionItem[]` (bitta retseptda bir nechta dori qatori bo'lishi mumkin, DMED formatiga mos — ikkala manbada ham bir xil ustunlar ishlatiladi).
+
+**dmed integratsiyasi hozircha mock**: real `api.dmed.uz` ulanishi yo'q (hamkorlik muzokara jarayonida). `src/integrations/dmed/` papkasida `DmedAdapter` interfeysi va `MockDmedAdapter` bor — `DMED_MODE` env orqali tanlanadi (hozircha faqat `mock` implementatsiya mavjud). Real kalitlar kelganda shu interfeysni implementatsiya qiluvchi yangi adapter yoziladi, boshqa hech narsa o'zgarmaydi.
 
 ## Eslatma
 

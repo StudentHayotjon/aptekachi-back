@@ -19,5 +19,8 @@ export const env = {
     passwordReset: {
         codeTtlMinutes: 10
     },
-    ocrServiceUrl: process.env.OCR_SERVICE_URL ?? "http://localhost:3000"
+    ocrServiceUrl: process.env.OCR_SERVICE_URL ?? "http://localhost:3000",
+    dmed: {
+        mode: process.env.DMED_MODE ?? "mock" // "mock" | "real" — real API kalitlari kelganda "real"ga o'zgartiriladi
+    }
 } as const;
