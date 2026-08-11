@@ -27,6 +27,7 @@ model User {
   passwordResetTokens   PasswordResetToken[]
   patientPrescriptions  Prescription[]       @relation("PatientPrescriptions")
   doctorPrescriptions   Prescription[]       @relation("DoctorPrescriptions")
+  medicationSchedules   MedicationSchedule[]
 
   @@map("users")
 }
@@ -87,6 +88,7 @@ model Drug {
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
   prescriptionItems    PrescriptionItem[]
+  medicationSchedules  MedicationSchedule[]
 
   @@index([name])
   @@map("drugs")
@@ -151,4 +153,48 @@ model PrescriptionItem {
 
   @@index([prescriptionId])
   @@map("prescription_items")
+}
+
+// F-003 Smart eslatma tizimi — dori qabul qilish jadvali (masalan "kuniga 3 marta: 08:00, 14:00, 20:00").
+model MedicationSchedule {
+  id            String      @id @default(uuid())
+  patientId     String
+  patient       User        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  drugId        String?
+  drug          Drug?       @relation(fields: [drugId], references: [id])
+  drugName      String // erkin nom — drugId bog'lanmagan bo'lsa ham eslatma yaratish mumkin
+  dosageNote    String? // masalan "1 tabletka"
+  scheduleTimes String[] // ["08:00", "14:00", "20:00"] — HH:mm, server lokal vaqti
+  startDate     DateTime
+  endDate       DateTime? // bo'sh bo'lsa muddatsiz
+  isActive      Boolean     @default(true) // false qilinsa yangi dose event yaratilmaydi
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  doseEvents    DoseEvent[]
+
+  @@index([patientId])
+  @@map("medication_schedules")
+}
+
+enum DoseStatus {
+  PENDING
+  TAKEN
+  SKIPPED
+}
+
+// Har bir aniq vaqtdagi bitta doza — "Oldim"/"O'tkazib yubordim" tugmalari shu yozuvga ta'sir qiladi.
+model DoseEvent {
+  id             String             @id @default(uuid())
+  scheduleId     String
+  schedule       MedicationSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  scheduledAt    DateTime // shu dozani qabul qilish rejalashtirilgan aniq vaqt
+  status         DoseStatus         @default(PENDING)
+  confirmedAt    DateTime?
+  remindersSent  Int                @default(0) // necha marta "hali ichmadingizmi?" eslatmasi yuborilgani
+  lastReminderAt DateTime?
+  createdAt      DateTime           @default(now())
+
+  @@unique([scheduleId, scheduledAt])
+  @@index([status, scheduledAt])
+  @@map("dose_events")
 }

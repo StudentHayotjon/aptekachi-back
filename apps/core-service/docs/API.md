@@ -425,6 +425,117 @@ Retseptni rad etadi. **Auth: JWT + `SHIFOKOR` roli.**
 
 ---
 
+# Schedule moduli (`/api/v1/schedules`) — F-003 Smart eslatma tizimi
+
+Base URL: `http://localhost:3001/api/v1/schedules`
+
+## 19. `POST /`
+
+Dori qabul qilish jadvali yaratish. **Auth: JWT + `BEMOR` roli.**
+
+**Request body**
+
+```json
+{
+  "drugId": null,
+  "drugName": "Vitamin C",
+  "dosageNote": "1 tabletka",
+  "scheduleTimes": ["08:00", "13:00", "20:00"],
+  "startDate": "2026-08-11",
+  "endDate": null
+}
+```
+
+`drugName` va `scheduleTimes` majburiy (`scheduleTimes` — kamida 1, ko'pi bilan 10 ta `HH:mm` vaqt). `drugId` ixtiyoriy — `drug` katalogidan bog'lash uchun (berilsa, mavjud va faol dori bo'lishi tekshiriladi).
+
+**Response — 201 Created**
+
+```json
+{
+  "success": true,
+  "message": "Dori jadvali yaratildi",
+  "data": {
+    "id": "uuid",
+    "patientId": "uuid",
+    "drugId": null,
+    "drugName": "Vitamin C",
+    "dosageNote": "1 tabletka",
+    "scheduleTimes": ["08:00", "13:00", "20:00"],
+    "startDate": "2026-08-11T00:00:00.000Z",
+    "endDate": null,
+    "isActive": true,
+    "createdAt": "2026-08-11T08:00:00.000Z",
+    "updatedAt": "2026-08-11T08:00:00.000Z"
+  }
+}
+```
+
+**Xatoliklar**: `400` validatsiya, `401/403` auth, `404` — `drugId` berilgan-u topilmagan/faol emas.
+
+## 20. `GET /`
+
+O'z jadvallari ro'yxati. **Auth: JWT + `BEMOR` roli.** — `data: ScheduleResponse[]` (sahifalashsiz, to'liq ro'yxat).
+
+## 21. `GET /:id`
+
+Bitta jadval (faqat egasi ko'ra oladi, aks holda `404`).
+
+## 22. `PATCH /:id/deactivate`
+
+Jadvalni to'xtatadi (`isActive: false`) — bundan keyin yangi `DoseEvent` yaratilmaydi, lekin avvalgi tarix saqlanib qoladi.
+
+---
+
+# Dose moduli (`/api/v1/doses`) — "Oldim" / "O'tkazib yubordim"
+
+Base URL: `http://localhost:3001/api/v1/doses`
+
+Har bir yozuv — bitta jadvalning bitta aniq vaqtdagi dozasi. Fon jarayoni (`src/jobs/dose-scheduler.job.ts`) faol jadvallardan avtomatik yaratadi (batafsil: [`README.md`](../README.md) § `schedule`/`dose` moduli).
+
+## 23. `GET /`
+
+O'z dozalari ro'yxati. **Auth: JWT + `BEMOR` roli.**
+
+**Query parametrlari**: `status` (`PENDING`/`TAKEN`/`SKIPPED`), `from`/`to` (ISO sana, `scheduledAt` bo'yicha oraliq filtri), `page` (default `1`), `limit` (default `50`, maks `200`).
+
+**Response — 200 OK**
+
+```json
+{
+  "success": true,
+  "message": "OK",
+  "data": {
+    "items": [
+      {
+        "id": "uuid",
+        "scheduleId": "uuid",
+        "drugName": "Vitamin C",
+        "dosageNote": "1 tabletka",
+        "scheduledAt": "2026-08-11T03:00:00.000Z",
+        "status": "PENDING",
+        "confirmedAt": null,
+        "remindersSent": 2
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 50
+  }
+}
+```
+
+## 24. `PATCH /:id/confirm`
+
+"Oldim" tugmasi — `status: TAKEN`, `confirmedAt` = hozirgi vaqt. **Auth: JWT + `BEMOR` roli**, faqat doza egasi.
+
+**Xatoliklar**: `404` topilmadi/boshqaniki, `409` — doza allaqachon `TAKEN`/`SKIPPED` (qayta belgilab bo'lmaydi).
+
+## 25. `PATCH /:id/skip`
+
+"O'tkazib yubordim" tugmasi — `status: SKIPPED`. Xatoliklar `confirm` bilan bir xil.
+
+---
+
 ## Umumiy xato javob shakli
 
 Validatsiya (400) va boshqa xatolar (401/403/404/409/500) uchun:

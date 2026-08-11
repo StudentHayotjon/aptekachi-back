@@ -18,7 +18,7 @@ TZ'ning o'zi "MVP" deb atagan qism (§9) ham quyidagilarni talab qiladi: iOS (Sw
 |---|---|---|---|
 | F-001 | dmed QR retsept integratsiyasi | ★ ASOSIY, MVP #1 | ✅ Mock adapter bilan qurilgan — `POST /api/v1/prescriptions/dmed`. Real `api.dmed.uz` hali ulanmagan (hamkorlik muzokara jarayonida), `DmedAdapter` interfeysi orqali oson almashtiriladi |
 | F-002 | OCR chek/retsept skaneri | ★ INNOVATSIYA, MVP #2 | ✅ Qurilgan — `ocr-service` (Gemini) + `core-service`dagi `prescription` moduli. Stack TZ'dan farqli (Python+Google Vision+spaCy/RxNorm o'rniga Node.js+Gemini) — pragmatik almashtirish, natija bir xil |
-| F-003 | Smart eslatma tizimi (push, missed dose, refill, drug interaction alert, Ramazon mode) | MVP | ❌ Yo'q — mahsulotning **asosiy qiymati** (dori ichishni eslatish), hali qurilmagan |
+| F-003 | Smart eslatma tizimi (push, missed dose, refill, drug interaction alert, Ramazon mode) | MVP | ✅ Yadrosi qurilgan — `schedule`/`dose` modullari: jadval, "Oldim"/"O'tkazib yubordim", har soatda qayta so'rash. Push/FCM/APNs/Ramazon mode/refill alert hali yo'q (quyida) |
 | F-004 | Dori ma'lumotlar bazasi (RxNorm/DrugBank/OpenFDA) + interaction checker | MVP | ⚠️ Qisman — oddiy `Drug` katalogi bor (`drug` moduli), lekin DrugBank litsenziyasi va interaction engine yo'q |
 | F-005..F-010 | Vital signs, AI Assistant, Oilaviy profil, Gamification, Apteka Map, Telemedicine | v1.5/v2.0 | Ataylab qamrovdan tashqarida — TZ'ning o'zida ham keyingi bosqich |
 | — | Sotib olish/buyurtma | TZ'da yo'q | ❌ Kerak emas — mahsulot qamrovida yo'q |
@@ -42,10 +42,14 @@ TZ'ning o'zi "MVP" deb atagan qism (§9) ham quyidagilarni talab qiladi: iOS (Sw
    - `Prescription` modeliga `dmedUuid` (`@unique`) va `source` (`OCR` / `DMED_QR`) maydoni qo'shildi
    - `POST /api/v1/prescriptions/dmed` — QR'dan o'qilgan UUID qabul qiladi, `src/integrations/dmed/DmedAdapter` interfeysi orqali ma'lumot oladi, import qilingan retsept darhol `APPROVED` bo'ladi (dmed'da allaqachon tasdiqlangan hisoblanadi)
    - Hozirgi implementatsiya — `MockDmedAdapter` (har qanday UUID uchun barqaror taxminiy javob, bitta sentinel UUID `404`ni simulyatsiya qiladi). Real API kalitlari kelganda `DMED_MODE=real` va yangi adapter implementatsiyasi qo'shiladi, qolgan tizim (route, service, DB) o'zgarmaydi. To'liq API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) § Prescription moduli
-2. **F-003 — Smart eslatma tizimi (soddalashtirilgan)** ← **keyingi qadam**
-   - To'liq TZ versiyasi (FCM/APNs, Bull Queue, Ramazon mode, voice TTS) native ilova va queue infratuzilmasini talab qiladi — hozircha yo'q
-   - MVP versiyasi: `MedicationSchedule` modeli (tasdiqlangan retsept/OCR natijasidan avtomatik yaratiladi) + oddiy cron-based tekshiruv + **email yoki SMS** orqali eslatma (push o'rniga, chunki mobil ilova yo'q)
-3. **F-004 — Drug interaction checker — soddalashtirilgan yoki keyinga qoldirish**
+2. ~~**F-003 — Smart eslatma tizimi (soddalashtirilgan)**~~ — ✅ yadrosi tayyor
+   - `MedicationSchedule` (dori + qabul vaqtlari, `["08:00","20:00"]` kabi) va `DoseEvent` (har bir aniq vaqtdagi bitta doza holati: `PENDING`/`TAKEN`/`SKIPPED`) modellari qo'shildi
+   - `POST /api/v1/schedules`, `GET/PATCH /api/v1/doses/:id/confirm`|`/skip` — "Oldim"/"O'tkazib yubordim" tugmalari uchun tayyor backend
+   - `src/jobs/dose-scheduler.job.ts` (`node-cron`): har 5 daqiqada vaqti kelgan dozalarni avtomatik yaratadi, **har soat boshida** javob berilmagan (`PENDING`, vaqti o'tgan) dozalar uchun qayta eslatma yuboradi (Medisafe/MyTherapy'dagi "missed dose" naging patterniga mos)
+   - Real bazada (Supabase) to'liq E2E tekshirildi: jadval yaratish → avtomatik doza generatsiyasi → confirm
+   - **Hali yo'q**: real push (FCM/APNs — mobil ilova yo'qligi uchun hozircha imkonsiz), eslatma yetkazish hali **stub** (`[REMINDER STUB]` konsolga), tasdiqlangan retsept/OCR natijasidan avtomatik jadval yaratish (hozircha faqat qo'lda `POST /schedules`), Ramazon mode, refill alert, drug interaction alert
+   - To'liq API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) § Schedule/Dose moduli
+3. **F-004 — Drug interaction checker — soddalashtirilgan yoki keyinga qoldirish** ← **keyingi qadam**
    - DrugBank kommertsiya litsenziyasi talab qiladi (pullik/murakkab) — hozircha real ma'lumot manbai yo'q
    - Muqobil: RxNorm (NIH/NLM, **bepul**) orqali faqat generic nom/ATC kod — to'liq interaction checker emas, lekin boshlanish nuqtasi. Yoki bu funksiyani butunlay keyingi bosqichga qoldirish
 4. **Frontend — PWA (web), native emas**
@@ -59,11 +63,11 @@ TZ'ning o'zi "MVP" deb atagan qism (§9) ham quyidagilarni talab qiladi: iOS (Sw
 
 | Qism | Holati | Izoh |
 |---|---|---|
-| `apps/core-service` | ✅ Ishlab turibdi | Modular monolit. `auth`, `drug`, `prescription` (F-002 OCR oqimi) modullari tayyor. Port: **3001**. API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) |
+| `apps/core-service` | ✅ Ishlab turibdi | Modular monolit. `auth`, `drug`, `prescription`, `schedule`, `dose` modullari tayyor. Port: **3001**. API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) |
 | `apps/ocr-service` | ✅ Ishlab turibdi | Gemini asosida OCR (F-002). Port: **3000** |
 | F-001 dmed integratsiyasi | ✅ Mock bilan tayyor | `src/integrations/dmed/` — real API kelguncha `MockDmedAdapter` ishlatiladi |
-| F-003 Smart eslatma | ❌ Keyingi qadam | Soddalashtirilgan (email/SMS) versiya |
-| F-004 Drug interaction checker | ⚠️ Keyinga qoldirilgan | Ma'lumot manbai (litsenziya) hal qilinmagan |
+| F-003 Smart eslatma | ✅ Yadrosi tayyor | `schedule`/`dose` + `dose-scheduler.job.ts` cron. Eslatma yetkazish hali stub (real SMS/push yo'q) |
+| F-004 Drug interaction checker | ⚠️ Keyingi qadam | Ma'lumot manbai (litsenziya) hal qilinmagan |
 | Admin paneli / PWA frontend | ❌ Mavjud emas | F-001/F-003'dan keyin |
 | `packages/shared-*`, `infra/*` | ⛔ Bo'sh | Monolit yondashuvida hozircha shart emas |
 
