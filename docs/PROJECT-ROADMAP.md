@@ -52,9 +52,10 @@ TZ'ning o'zi "MVP" deb atagan qism (§9) ham quyidagilarni talab qiladi: iOS (Sw
 3. **F-004 — Drug interaction checker — soddalashtirilgan yoki keyinga qoldirish** ← **keyingi qadam**
    - DrugBank kommertsiya litsenziyasi talab qiladi (pullik/murakkab) — hozircha real ma'lumot manbai yo'q
    - Muqobil: RxNorm (NIH/NLM, **bepul**) orqali faqat generic nom/ATC kod — to'liq interaction checker emas, lekin boshlanish nuqtasi. Yoki bu funksiyani butunlay keyingi bosqichga qoldirish
-4. **Frontend — PWA (web), native emas**
-   - TZ ham PWA'ni (Node.js/Next.js) muqobil platforma sifatida sanaydi — solo dev uchun eng realistik yo'l
-   - iOS/Android native — jiddiy resurs (alohida Swift/Java dev) talab qiladi, hozircha qamrovdan tashqarida
+4. **Frontend — hali boshlanmagan, ataylab keyinga qoldirilgan**
+   - Muhokama qilingan, lekin qaror: backend ustida davom etish (F-004 va h.k.), frontend ishi keyingi bosqichda
+   - **Muhim aniqlangan tafovut (frontend boshlanganda hisobga olinsin)**: "internet o'chirilganda ham aniq vaqtda bildirishnoma" talabi PWA bilan **to'liq kafolatlanmaydi** — iOS Safari/PWA `Notification Triggers API`ni umuman qo'llab-quvvatlamaydi, Android Chrome'da ham eksperimental. TZ shuning uchun aynan native (`UNNotificationCenter` / `AlarmManager`) tanlagan. Frontend ishi boshlanganda PWA vs native (kamida Android) tanlovi **qayta ko'rib chiqilishi kerak**, ayniqsa TZ'ning o'zi "Internet yo'qligi — Yuqori (viloyatlar)" xavfini alohida qayd etgani uchun
+   - To'g'ri arxitektura (frontend qurilganda): klient `GET /schedules`dan jadvalni tortib oladi → mahalliy xotiraga (SQLite/Room/Core Data) saqlaydi → qurilmaning o'zi mahalliy bildirishnoma rejalashtiradi (serverga bog'liq emas) → oflayn confirm/skip navbatga qo'yiladi, internet qaytganda serverga sinxronlanadi
 5. Admin panel, `notification` moduli (real SMS) — F-001/F-003 bilan bog'liq holda, ulardan keyin
 
 ---
