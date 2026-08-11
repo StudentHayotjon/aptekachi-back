@@ -12,7 +12,7 @@ const NAG_INTERVAL_MS = 60 * 60 * 1000;
 
 const pad = (n: number): string => n.toString().padStart(2, "0");
 
-const generateDueDoseEvents = async (): Promise<void> => {
+export const generateDueDoseEvents = async (): Promise<void> => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -48,7 +48,7 @@ const sendReminderStub = (phone: string, drugName: string, scheduledAt: Date, at
     console.log(`[REMINDER STUB] ${phone} — "${drugName}" dozasi (${time}) hali tasdiqlanmagan. ${attempt}-eslatma: "Dorini ichdingizmi?"`);
 };
 
-const nagOverdueDoses = async (): Promise<void> => {
+export const nagOverdueDoses = async (): Promise<void> => {
     const now = new Date();
     const nagThreshold = new Date(now.getTime() - NAG_INTERVAL_MS);
 
