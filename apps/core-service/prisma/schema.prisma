@@ -150,6 +150,7 @@ model PrescriptionItem {
   totalQuantity  String? // OCR: umumiy_miqdori
   note           String? // OCR: izoh
   validUntil     String? // OCR: amal_qilish_muddati
+  medicationSchedule MedicationSchedule?
 
   @@index([prescriptionId])
   @@map("prescription_items")
@@ -171,6 +172,8 @@ model MedicationSchedule {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   doseEvents    DoseEvent[]
+  prescriptionItemId String?           @unique // tasdiqlangan PrescriptionItem'dan avtomatik yaratilgan bo'lsa (idempotentlik uchun ham kerak)
+  prescriptionItem   PrescriptionItem? @relation(fields: [prescriptionItemId], references: [id], onDelete: SetNull)
 
   @@index([patientId])
   @@map("medication_schedules")

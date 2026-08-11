@@ -7,6 +7,7 @@ import { env } from "../config/env.config";
 import { AppError } from "../utils/app-error.util";
 import { ListPrescriptionQueryDto, PrescriptionListResponse, PrescriptionResponse, RejectPrescriptionDto } from "../dtos/prescription.dto";
 import { getDmedAdapter } from "../integrations/dmed/dmed.adapter";
+import { ScheduleService } from "./schedule.service";
 
 const UPLOAD_DIR = path.join(__dirname, "..", "..", "uploads", "prescriptions");
 
@@ -95,6 +96,17 @@ const saveImage = async (file: Express.Multer.File): Promise<string> => {
     return `/uploads/prescriptions/${filename}`;
 };
 
+// F-003: retsept APPROVED bo'lganda avtomatik eslatma jadvali yaratadi. Halokatga uchramaydigan
+// yon effekt — xato bo'lsa ham retsept tasdiqlash/import natijasini bekor qilmaydi.
+const autoCreateSchedules = async (prescription: PrescriptionWithItems): Promise<void> => {
+    try {
+        const summary = await ScheduleService.createFromPrescriptionItems(prescription.patientId, prescription.items);
+        console.log(`[prescription] ${prescription.id}: ${summary.created} jadval yaratildi, ${summary.skipped} o'tkazib yuborildi`);
+    } catch (error) {
+        console.error(`[prescription] ${prescription.id} uchun avtomatik jadval yaratishda kutilmagan xato:`, error);
+    }
+};
+
 export class PrescriptionService {
     public static async create(patientId: string, file: Express.Multer.File): Promise<PrescriptionResponse> {
         const ocrItems = await analyzeWithOcrService(file);
@@ -172,6 +184,8 @@ export class PrescriptionService {
             include: { items: true }
         });
 
+        await autoCreateSchedules(prescription);
+
         return toPrescriptionResponse(prescription);
     }
 
@@ -222,6 +236,8 @@ export class PrescriptionService {
             data: { status: PrescriptionStatus.APPROVED, doctorId, reviewedAt: new Date(), rejectReason: null },
             include: { items: true }
         });
+
+        await autoCreateSchedules(prescription);
 
         return toPrescriptionResponse(prescription);
     }

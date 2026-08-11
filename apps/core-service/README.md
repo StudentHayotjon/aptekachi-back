@@ -87,6 +87,8 @@ To'liq API hujjati: [`docs/API.md`](docs/API.md) — `auth` moduli (`/api/v1/aut
 
 `Prescription` ikki manbadan biriga ega bo'ladi (`source`): **`OCR`** — retsept rasmi yuklanib, shifokor tasdiqlashi kerak (`PENDING → APPROVED/REJECTED`); **`DMED_QR`** — dmed davlat tizimidan QR orqali import qilinadi, allaqachon rasmiy tasdiqlangan hisoblanib, darhol `APPROVED` bo'ladi (qayta tasdiqlash shart emas). `Prescription` → `PrescriptionItem[]` (bitta retseptda bir nechta dori qatori bo'lishi mumkin, DMED formatiga mos — ikkala manbada ham bir xil ustunlar ishlatiladi).
 
+**Retsept tasdiqlanganda (`approve()` yoki `importFromDmed()`) avtomatik eslatma jadvali yaratiladi** — har bir `PrescriptionItem` uchun `ScheduleService.createFromPrescriptionItems()` chaqiriladi (batafsil: quyida `schedule` moduli bo'limida).
+
 **dmed integratsiyasi hozircha mock**: real `api.dmed.uz` ulanishi yo'q (hamkorlik muzokara jarayonida). `src/integrations/dmed/` papkasida `DmedAdapter` interfeysi va `MockDmedAdapter` bor — `DMED_MODE` env orqali tanlanadi (hozircha faqat `mock` implementatsiya mavjud). Real kalitlar kelganda shu interfeysni implementatsiya qiluvchi yangi adapter yoziladi, boshqa hech narsa o'zgarmaydi.
 
 ### `schedule` moduli (`/api/v1/schedules`) — F-003 Smart eslatma tizimi
@@ -97,6 +99,14 @@ To'liq API hujjati: [`docs/API.md`](docs/API.md) — `auth` moduli (`/api/v1/aut
 | GET | `/` | JWT + `BEMOR` | O'z jadvallari ro'yxati |
 | GET | `/:id` | JWT + `BEMOR` | Bitta jadval (faqat egasi) |
 | PATCH | `/:id/deactivate` | JWT + `BEMOR` | Jadvalni to'xtatish (`isActive=false`, yangi doza yaratilmaydi) |
+
+**Avtomatik yaratish (retsept → jadval)**: `ScheduleService.createFromPrescriptionItems(patientId, items)` — tasdiqlangan retsept (`prescription` moduli, F-001/F-002) har bir dori qatoridan avtomatik jadval yaratadi. Xatti-harakat (`src/utils/dose-parser.util.ts`):
+- `dailyDoseCount` (masalan `"2"`) → `scheduleTimes` — 08:00–22:00 oralig'ida teng taqsimlangan N ta vaqt (o'qib bo'lmasa — bitta standart `09:00`)
+- `duration` (masalan `"5 kun"`, `"2 hafta"`) → `endDate` (o'qib bo'lmasa — muddatsiz, `null`)
+- `"kerak bo'lganda"` / `"zarurat"` / PRN kabi iboralar — jadval yaratilmaydi, o'tkazib yuboriladi (taxmin qilinmaydi)
+- `MedicationSchedule.prescriptionItemId` (unique) — bir xil itemdan qayta chaqirilsa ham dublikat yaratilmaydi (idempotent)
+- **Halokatga uchramaydigan yon effekt**: xato bo'lsa ham retsept tasdiqlash/import natijasi bekor qilinmaydi, faqat konsolga log yoziladi
+- Bu — klinik jihatdan tasdiqlanmagan evristika. Auto-yaratilgan jadvalni hozircha faqat `deactivate` qilish mumkin, tahrirlash yo'q (kelajakda `PATCH /schedules/:id` qo'shilishi mumkin)
 
 ### `dose` moduli (`/api/v1/doses`) — "Oldim"/"O'tkazib yubordim" tugmalari
 
