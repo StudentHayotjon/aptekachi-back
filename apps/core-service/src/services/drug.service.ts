@@ -2,6 +2,7 @@ import { Drug, Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma.client";
 import { AppError } from "../utils/app-error.util";
 import { CreateDrugDto, DrugListResponse, DrugResponse, ListDrugQueryDto, UpdateDrugDto } from "../dtos/drug.dto";
+import { DrugMatchCandidate } from "../utils/drug-matcher.util";
 
 const toDrugResponse = (drug: Drug): DrugResponse => ({
     id: drug.id,
@@ -45,6 +46,14 @@ export class DrugService {
         ]);
 
         return { items: items.map(toDrugResponse), total, page, limit };
+    }
+
+    // prescription.service.ts'dagi Levenshtein fuzzy-matching uchun — faqat faol dorilar, kerakli maydonlar
+    public static async listMatchCandidates(): Promise<DrugMatchCandidate[]> {
+        return prisma.drug.findMany({
+            where: { isActive: true },
+            select: { id: true, name: true, internationalName: true }
+        });
     }
 
     public static async getById(id: string): Promise<DrugResponse> {

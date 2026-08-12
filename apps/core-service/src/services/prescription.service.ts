@@ -8,6 +8,8 @@ import { AppError } from "../utils/app-error.util";
 import { ListPrescriptionQueryDto, PrescriptionListResponse, PrescriptionResponse, RejectPrescriptionDto } from "../dtos/prescription.dto";
 import { getDmedAdapter } from "../integrations/dmed/dmed.adapter";
 import { ScheduleService } from "./schedule.service";
+import { DrugService } from "./drug.service";
+import { findBestDrugMatch } from "../utils/drug-matcher.util";
 
 const UPLOAD_DIR = path.join(__dirname, "..", "..", "uploads", "prescriptions");
 
@@ -96,6 +98,18 @@ const saveImage = async (file: Express.Multer.File): Promise<string> => {
     return `/uploads/prescriptions/${filename}`;
 };
 
+// Dori bazasidan Levenshtein moslashtirish — halokatga uchramaydigan yon hisoblash. Xato bo'lsa
+// yoki mos dori topilmasa, drugId=null bilan davom etiladi (retsept yaratilishini bekor qilmaydi).
+const matchDrugIds = async (rawNames: string[]): Promise<(string | null)[]> => {
+    try {
+        const candidates = await DrugService.listMatchCandidates();
+        return rawNames.map((raw) => findBestDrugMatch(raw, candidates));
+    } catch (error) {
+        console.error("[prescription] dori bazasidan moslashtirishda kutilmagan xato:", error);
+        return rawNames.map(() => null);
+    }
+};
+
 // F-003: retsept APPROVED bo'lganda avtomatik eslatma jadvali yaratadi. Halokatga uchramaydigan
 // yon effekt — xato bo'lsa ham retsept tasdiqlash/import natijasini bekor qilmaydi.
 const autoCreateSchedules = async (prescription: PrescriptionWithItems): Promise<void> => {
@@ -115,18 +129,20 @@ export class PrescriptionService {
         }
 
         const imageUrl = await saveImage(file);
+        const drugIds = await matchDrugIds(ocrItems.map((item) => item.dori_nomi_xpn));
 
         const prescription = await prisma.prescription.create({
             data: {
                 patientId,
                 imageUrl,
                 items: {
-                    create: ocrItems.map((item) => ({
+                    create: ocrItems.map((item, index) => ({
                         retseptId: item.retsept_id,
                         himoyaKodi: item.himoya_kodi,
                         bemorFish: item.bemor_fish,
                         bemorYosh: item.bemor_yosh,
                         shifokorFish: item.shifokor,
+                        drugId: drugIds[index],
                         drugNameRaw: item.dori_nomi_xpn,
                         releaseForm: item.chiqarilish_shakli,
                         usageMethod: item.qabul_qilish_usuli,
@@ -156,6 +172,8 @@ export class PrescriptionService {
             throw new AppError(404, "dmed tizimida bunday retsept topilmadi");
         }
 
+        const drugIds = await matchDrugIds(dmedData.items.map((item) => item.drugNameRaw));
+
         const prescription = await prisma.prescription.create({
             data: {
                 patientId,
@@ -164,11 +182,12 @@ export class PrescriptionService {
                 status: PrescriptionStatus.APPROVED, // dmed retsepti allaqachon shifokor tomonidan rasmiylashtirilgan va imzolangan
                 reviewedAt: new Date(),
                 items: {
-                    create: dmedData.items.map((item) => ({
+                    create: dmedData.items.map((item, index) => ({
                         himoyaKodi: dmedData.himoyaKodi,
                         bemorFish: dmedData.bemorFish,
                         bemorYosh: dmedData.bemorYosh,
                         shifokorFish: dmedData.shifokorFish,
+                        drugId: drugIds[index],
                         drugNameRaw: item.drugNameRaw,
                         releaseForm: item.releaseForm,
                         usageMethod: item.usageMethod,

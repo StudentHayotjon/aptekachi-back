@@ -89,6 +89,8 @@ To'liq API hujjati: [`docs/API.md`](docs/API.md) — `auth` moduli (`/api/v1/aut
 
 **Retsept tasdiqlanganda (`approve()` yoki `importFromDmed()`) avtomatik eslatma jadvali yaratiladi** — har bir `PrescriptionItem` uchun `ScheduleService.createFromPrescriptionItems()` chaqiriladi (batafsil: quyida `schedule` moduli bo'limida).
 
+**Dori nomini katalogga avtomatik bog'lash**: har bir item yaratilishida (`create()` va `importFromDmed()`ning ikkalasida ham) `drugNameRaw` (masalan "Paracetamol 500mg") `Drug` katalogiga (faqat `isActive: true`) Levenshtein masofasi orqali moslashtiriladi (`src/utils/drug-matcher.util.ts`, TZ §3.2.4 asosida) va topilsa `drugId` avtomatik to'ldiriladi. Mos dori topilmasa (yoki noaniq bo'lsa — ikkita candidate teng masofada) — `drugId: null` bilan xavfsiz davom etiladi, taxmin qilinmaydi. `MedicationSchedule.drugId` buni bepul meros oladi (`ScheduleService.createFromPrescriptionItems` allaqachon `item.drugId`ni ishlatadi).
+
 **dmed integratsiyasi hozircha mock**: real `api.dmed.uz` ulanishi yo'q (hamkorlik muzokara jarayonida). `src/integrations/dmed/` papkasida `DmedAdapter` interfeysi va `MockDmedAdapter` bor — `DMED_MODE` env orqali tanlanadi (hozircha faqat `mock` implementatsiya mavjud). Real kalitlar kelganda shu interfeysni implementatsiya qiluvchi yangi adapter yoziladi, boshqa hech narsa o'zgarmaydi.
 
 ### `schedule` moduli (`/api/v1/schedules`) — F-003 Smart eslatma tizimi
