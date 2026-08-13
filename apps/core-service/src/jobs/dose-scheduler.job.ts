@@ -58,11 +58,18 @@ export const nagOverdueDoses = async (): Promise<void> => {
             scheduledAt: { lte: now },
             OR: [{ lastReminderAt: null }, { lastReminderAt: { lte: nagThreshold } }]
         },
-        include: { schedule: { include: { patient: true } } }
+        include: { schedule: { include: { patient: true, familyMember: { include: { guardian: true } } } } }
     });
 
     for (const dose of overdue) {
-        sendReminderStub(dose.schedule.patient.phone, dose.schedule.drugName, dose.scheduledAt, dose.remindersSent + 1);
+        // Oila a'zosi (akkauntsiz) jadvali bo'lsa — eslatma guardian'ning raqamiga yuboriladi.
+        const recipientPhone = dose.schedule.patient?.phone ?? dose.schedule.familyMember?.guardian.phone;
+        if (!recipientPhone) {
+            console.error(`[dose-scheduler] ${dose.id}: eslatma qabul qiluvchisi topilmadi, o'tkazib yuborildi`);
+            continue;
+        }
+
+        sendReminderStub(recipientPhone, dose.schedule.drugName, dose.scheduledAt, dose.remindersSent + 1);
         await prisma.doseEvent.update({
             where: { id: dose.id },
             data: { remindersSent: { increment: 1 }, lastReminderAt: now }

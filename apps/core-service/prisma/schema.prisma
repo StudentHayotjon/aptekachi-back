@@ -28,8 +28,42 @@ model User {
   patientPrescriptions  Prescription[]       @relation("PatientPrescriptions")
   doctorPrescriptions   Prescription[]       @relation("DoctorPrescriptions")
   medicationSchedules   MedicationSchedule[]
+  guardianOfFamilyMembers FamilyMember[]     @relation("GuardianOf")
+  careLinksAsViewer     CareLink[]           @relation("CareLinkViewer")
+  careLinksAsSubject    CareLink[]           @relation("CareLinkSubject")
 
   @@map("users")
+}
+
+// Oilaviy profil — akkauntsiz shaxs (masalan telefoni yo'q bola yoki keksa ota-ona).
+// Guardian bu profilni to'liq mustaqil boshqaradi (o'z hisobidek).
+model FamilyMember {
+  id                  String                @id @default(uuid())
+  guardianId          String
+  guardian            User                  @relation("GuardianOf", fields: [guardianId], references: [id], onDelete: Cascade)
+  fullName            String
+  relationship        String? // "farzand", "ota", "ona" — erkin matn
+  birthDate           DateTime?
+  createdAt           DateTime              @default(now())
+  medicationSchedules MedicationSchedule[]
+
+  @@index([guardianId])
+  @@map("family_members")
+}
+
+// Haqiqiy akkauntga (real User) faqat-ko'rish uchun ulanish — telefon raqami orqali darhol
+// yaratiladi (tasdiqlash bosqichisiz, foydalanuvchi tanlovi bo'yicha), jadvalni o'zgartirish
+// huquqi bermaydi — bu himoya talabi.
+model CareLink {
+  id        String   @id @default(uuid())
+  viewerId  String // kuzatuvchi (masalan farzand)
+  viewer    User     @relation("CareLinkViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+  subjectId String // kuzatiladigan haqiqiy akkaunt (masalan ota-ona)
+  subject   User     @relation("CareLinkSubject", fields: [subjectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([viewerId, subjectId])
+  @@map("care_links")
 }
 
 model RefreshToken {
@@ -187,8 +221,10 @@ model PrescriptionItem {
 // F-003 Smart eslatma tizimi — dori qabul qilish jadvali (masalan "kuniga 3 marta: 08:00, 14:00, 20:00").
 model MedicationSchedule {
   id            String      @id @default(uuid())
-  patientId     String
-  patient       User        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId     String? // aynan bittasi to'ldiriladi: patientId (o'zi) yoki familyMemberId
+  patient       User?       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  familyMemberId String?
+  familyMember  FamilyMember? @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
   drugId        String?
   drug          Drug?       @relation(fields: [drugId], references: [id])
   drugName      String // erkin nom — drugId bog'lanmagan bo'lsa ham eslatma yaratish mumkin
@@ -204,6 +240,7 @@ model MedicationSchedule {
   prescriptionItem   PrescriptionItem? @relation(fields: [prescriptionItemId], references: [id], onDelete: SetNull)
 
   @@index([patientId])
+  @@index([familyMemberId])
   @@map("medication_schedules")
 }
 

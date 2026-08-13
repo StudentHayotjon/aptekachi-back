@@ -19,9 +19,11 @@ TZ'ning o'zi "MVP" deb atagan qism (§9) ham quyidagilarni talab qiladi: iOS (Sw
 | F-001 | dmed QR retsept integratsiyasi | ★ ASOSIY, MVP #1 | ✅ Mock adapter bilan qurilgan — `POST /api/v1/prescriptions/dmed`. Real `api.dmed.uz` hali ulanmagan (hamkorlik muzokara jarayonida), `DmedAdapter` interfeysi orqali oson almashtiriladi |
 | F-002 | OCR chek/retsept skaneri | ★ INNOVATSIYA, MVP #2 | ✅ Qurilgan — `ocr-service` (Gemini) + `core-service`dagi `prescription` moduli. Stack TZ'dan farqli (Python+Google Vision+spaCy/RxNorm o'rniga Node.js+Gemini) — pragmatik almashtirish, natija bir xil |
 | F-003 | Smart eslatma tizimi (push, missed dose, refill, drug interaction alert, Ramazon mode) | MVP | ✅ Yadrosi qurilgan — `schedule`/`dose` modullari: jadval, "Oldim"/"O'tkazib yubordim", har soatda qayta so'rash. Push/FCM/APNs/Ramazon mode/refill alert hali yo'q (quyida) |
-| F-004 | Dori ma'lumotlar bazasi (RxNorm/DrugBank/OpenFDA) + interaction checker | MVP | ⚠️ Qisman — oddiy `Drug` katalogi bor (`drug` moduli), lekin DrugBank litsenziyasi va interaction engine yo'q |
-| F-005..F-010 | Vital signs, AI Assistant, Oilaviy profil, Gamification, Apteka Map, Telemedicine | v1.5/v2.0 | Ataylab qamrovdan tashqarida — TZ'ning o'zida ham keyingi bosqich |
+| F-004 | Dori ma'lumotlar bazasi (RxNorm/DrugBank/OpenFDA) + interaction checker | MVP | ✅ Struktura tayyor — `interaction` moduli (`DrugInteraction`, admin CRUD + `POST /check`). Real ma'lumot manbai (DrugBank litsenziyasi) hali yo'q, jadval admin tomonidan qo'lda to'ldiriladi |
+| F-005..F-010 | Vital signs, AI Assistant, Oilaviy profil, Gamification, Apteka Map, Telemedicine | v1.5/v2.0 | **Oilaviy profil** — ✅ qamrovga qo'shildi va qurildi (`family` moduli, quyida). **Ramazon mode** (F-003 kengaytmasi) — reja tasdiqlangan, hali qurilmagan. **Gamification** — ataylab deprioritized ("hozircha majburiyat emas"). Qolganlari (Vital signs, AI Assistant, Apteka Map, Telemedicine) ataylab qamrovdan tashqarida |
 | — | Sotib olish/buyurtma | TZ'da yo'q | ❌ Kerak emas — mahsulot qamrovida yo'q |
+
+**Ish printsipi**: bu nuqtadan boshlab qat'iy TZ talabi bo'yicha ishlanadi — TZ'da yo'q narsalar deprioritized qilinadi, TZ ustuvorligi o'zgarganda bu jadval shunga mos yangilanadi.
 
 ## 2. Rollar va infratuzilma — TZ bilan solishtirish
 
@@ -51,9 +53,14 @@ TZ'ning o'zi "MVP" deb atagan qism (§9) ham quyidagilarni talab qiladi: iOS (Sw
    - ~~`drugId` doim `null` (fuzzy-matching yo'q)~~ — ✅ **tayyor**: `PrescriptionItem`/`MedicationSchedule` yaratilishida `drugNameRaw` `Drug` katalogiga (`isActive: true`) Levenshtein masofasi orqali moslashtiriladi (`src/utils/drug-matcher.util.ts`, TZ §3.2.4). Mos topilmasa yoki noaniq (bir nechta teng candidate) bo'lsa — `null`, taxmin qilinmaydi. Schema/migratsiya o'zgarishi kerak bo'lmadi (`drugId` allaqachon mavjud edi). Real bazada ijobiy va salbiy holat tekshirildi
    - **Hali yo'q**: real push (FCM/APNs — mobil ilova yo'qligi uchun hozircha imkonsiz), eslatma yetkazish hali **stub** (`[REMINDER STUB]` konsolga), auto-yaratilgan jadvalni tahrirlash (faqat deactivate bor), Ramazon mode, refill alert, drug interaction alert
    - To'liq API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) § Schedule/Dose moduli, [`apps/core-service/README.md`](../apps/core-service/README.md) § `schedule` moduli
-3. **F-004 — Drug interaction checker — soddalashtirilgan yoki keyinga qoldirish** ← **keyingi qadam**
-   - DrugBank kommertsiya litsenziyasi talab qiladi (pullik/murakkab) — hozircha real ma'lumot manbai yo'q
-   - Muqobil: RxNorm (NIH/NLM, **bepul**) orqali faqat generic nom/ATC kod — to'liq interaction checker emas, lekin boshlanish nuqtasi. Yoki bu funksiyani butunlay keyingi bosqichga qoldirish
+3. ~~**F-004 — Drug interaction checker — struktura**~~ — ✅ tayyor
+   - DrugBank kommertsiya litsenziyasi talab qiladi (pullik/murakkab) — hozircha real ma'lumot manbai yo'q, shuning uchun **faqat struktura** qurildi: `DrugInteraction` modeli (`severity`: GREEN/YELLOW/RED), admin CRUD (`POST/GET/DELETE /interactions`), `POST /interactions/check` (istalgan rol). Juftlik doim `drugAId < drugBId` tartibida saqlanadi (`sortPair()`), takroriy A-B/B-A yozuv oldini oladi
+   - Jadval bo'sh boshlanadi — real ma'lumot (RxNorm/DrugBank) kelganda admin panel orqali yoki import skripti bilan to'ldiriladi, schema o'zgarishi shart emas
+   - Real bazada to'liq E2E tekshirildi (create/duplicate-409/check/list/delete)
+   - To'liq API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) § Interaction moduli
+3.1. ~~**Admin foydalanuvchi boshqaruvi**~~ — ✅ tayyor — `GET /auth/users` (filter+sahifalash), `PATCH /auth/users/:id/status` (deaktivatsiya — faol refresh tokenlarni ham bekor qiladi), `POST /auth/users/provision` (SHIFOKOR/ADMINISTRATOR to'g'ridan-to'g'ri yaratish). Real bazada tekshirildi
+3.2. ~~**Oilaviy profil**~~ — ✅ tayyor — `family` moduli: akkauntsiz oila a'zosi (`FamilyMember`, guardian to'liq boshqaradi) + haqiqiy akkauntga faqat-ko'rish uchun ulanish (`CareLink`, telefon orqali darhol, tasdiqlashsiz — ongli tanlangan himoya kelishuvi). `schedule`/`dose` modullari kengaytirildi: `GET /schedules`, `GET /doses` endi uchta manbadan (o'zi/oila a'zosi/ulangan akkaunt) birlashtirilgan ro'yxat qaytaradi, `owner` maydoni bilan. Yozish (create/deactivate/confirm/skip) faqat o'ziniki va oila a'zosiniki uchun — ulangan haqiqiy akkauntga urinish `403`. Real bazada to'liq E2E (ikkala yo'nalish + salbiy holat) tekshirildi. To'liq API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) § Family moduli
+3.3. **Ramazon mode** (F-003 kengaytmasi) ← **keyingi qadam** — reja tasdiqlangan, hali qurilmagan: `User.ramazonModeEnabled`, `PATCH /auth/me/ramazon-mode`, ro'za oyida qabul vaqtlarini iftor/saharlik atrofiga dinamik qayta taqsimlash (`dose-scheduler.job.ts` ichida)
 4. **Frontend — hali boshlanmagan, ataylab keyinga qoldirilgan**
    - Muhokama qilingan, lekin qaror: backend ustida davom etish (F-004 va h.k.), frontend ishi keyingi bosqichda
    - **Muhim aniqlangan tafovut (frontend boshlanganda hisobga olinsin)**: "internet o'chirilganda ham aniq vaqtda bildirishnoma" talabi PWA bilan **to'liq kafolatlanmaydi** — iOS Safari/PWA `Notification Triggers API`ni umuman qo'llab-quvvatlamaydi, Android Chrome'da ham eksperimental. TZ shuning uchun aynan native (`UNNotificationCenter` / `AlarmManager`) tanlagan. Frontend ishi boshlanganda PWA vs native (kamida Android) tanlovi **qayta ko'rib chiqilishi kerak**, ayniqsa TZ'ning o'zi "Internet yo'qligi — Yuqori (viloyatlar)" xavfini alohida qayd etgani uchun
@@ -66,11 +73,14 @@ TZ'ning o'zi "MVP" deb atagan qism (§9) ham quyidagilarni talab qiladi: iOS (Sw
 
 | Qism | Holati | Izoh |
 |---|---|---|
-| `apps/core-service` | ✅ Ishlab turibdi | Modular monolit. `auth`, `drug`, `prescription`, `schedule`, `dose` modullari tayyor. Port: **3001**. API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) |
+| `apps/core-service` | ✅ Ishlab turibdi | Modular monolit. `auth`, `drug`, `prescription`, `schedule`, `dose`, `interaction`, `family` modullari tayyor. Port: **3001**. API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) |
 | `apps/ocr-service` | ✅ Ishlab turibdi | Gemini asosida OCR (F-002). Port: **3000** |
 | F-001 dmed integratsiyasi | ✅ Mock bilan tayyor | `src/integrations/dmed/` — real API kelguncha `MockDmedAdapter` ishlatiladi |
-| F-003 Smart eslatma | ✅ Yadrosi tayyor | `schedule`/`dose` + `dose-scheduler.job.ts` cron. Eslatma yetkazish hali stub (real SMS/push yo'q) |
-| F-004 Drug interaction checker | ⚠️ Keyingi qadam | Ma'lumot manbai (litsenziya) hal qilinmagan |
+| F-003 Smart eslatma | ✅ Yadrosi tayyor | `schedule`/`dose` + `dose-scheduler.job.ts` cron. Eslatma yetkazish hali stub (real SMS/push yo'q). Ramazon mode — reja tasdiqlangan, keyingi qadam |
+| F-004 Drug interaction checker | ✅ Struktura tayyor | `interaction` moduli — jadval bo'sh, ma'lumot manbai (litsenziya) hal qilinmagan |
+| Oilaviy profil | ✅ Tayyor | `family` moduli — akkauntsiz a'zo (to'liq boshqarish) + haqiqiy akkaunt (faqat-ko'rish ulanish) |
+| Admin foydalanuvchi boshqaruvi | ✅ Tayyor | `GET /auth/users`, `PATCH /auth/users/:id/status`, `POST /auth/users/provision` |
+| Gamification | ⛔ Deprioritized | "Hozircha majburiyat emas" — foydalanuvchi so'rovi bo'yicha qamrovdan chiqarilgan |
 | Admin paneli / PWA frontend | ❌ Mavjud emas | F-001/F-003'dan keyin |
 | `packages/shared-*`, `infra/*` | ⛔ Bo'sh | Monolit yondashuvida hozircha shart emas |
 

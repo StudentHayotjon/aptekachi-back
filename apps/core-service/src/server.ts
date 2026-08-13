@@ -8,6 +8,7 @@ import { prescriptionRouter } from "./routes/prescription.routes";
 import { scheduleRouter } from "./routes/schedule.routes";
 import { doseRouter } from "./routes/dose.routes";
 import { interactionRouter } from "./routes/interaction.routes";
+import { familyRouter } from "./routes/family.routes";
 import { ReqType, ResType } from "./types/express.types";
 import { errorHandler } from "./middleware/error.middleware";
 import { startDoseJobs } from "./jobs/dose-scheduler.job";
@@ -26,6 +27,7 @@ app.use("/api/v1/prescriptions", prescriptionRouter);
 app.use("/api/v1/schedules", scheduleRouter);
 app.use("/api/v1/doses", doseRouter);
 app.use("/api/v1/interactions", interactionRouter);
+app.use("/api/v1/family", familyRouter);
 // Kelajakdagi modullar shu yerga qo'shiladi:
 // app.use("/api/v1/notifications", notificationRouter);
 app.use(errorHandler);

@@ -494,6 +494,7 @@ Dori qabul qilish jadvali yaratish. **Auth: JWT + `BEMOR` roli.**
 
 ```json
 {
+  "familyMemberId": null,
   "drugId": null,
   "drugName": "Vitamin C",
   "dosageNote": "1 tabletka",
@@ -503,7 +504,7 @@ Dori qabul qilish jadvali yaratish. **Auth: JWT + `BEMOR` roli.**
 }
 ```
 
-`drugName` va `scheduleTimes` majburiy (`scheduleTimes` — kamida 1, ko'pi bilan 10 ta `HH:mm` vaqt). `drugId` ixtiyoriy — `drug` katalogidan bog'lash uchun (berilsa, mavjud va faol dori bo'lishi tekshiriladi).
+`drugName` va `scheduleTimes` majburiy (`scheduleTimes` — kamida 1, ko'pi bilan 10 ta `HH:mm` vaqt). `drugId` ixtiyoriy — `drug` katalogidan bog'lash uchun (berilsa, mavjud va faol dori bo'lishi tekshiriladi). `familyMemberId` ixtiyoriy — berilsa jadval o'sha (akkauntsiz) oila a'zosiga tegishli bo'ladi (`patientId: null`), berilmasa — o'zingizga (batafsil: § Family moduli).
 
 **Response — 201 Created**
 
@@ -514,6 +515,8 @@ Dori qabul qilish jadvali yaratish. **Auth: JWT + `BEMOR` roli.**
   "data": {
     "id": "uuid",
     "patientId": "uuid",
+    "familyMemberId": null,
+    "owner": { "type": "SELF", "id": "uuid", "fullName": "Aziz Karimov" },
     "drugId": null,
     "drugName": "Vitamin C",
     "dosageNote": "1 tabletka",
@@ -527,19 +530,21 @@ Dori qabul qilish jadvali yaratish. **Auth: JWT + `BEMOR` roli.**
 }
 ```
 
-**Xatoliklar**: `400` validatsiya, `401/403` auth, `404` — `drugId` berilgan-u topilmagan/faol emas.
+`owner.type` — `SELF` (o'zingiz), `FAMILY_MEMBER` (akkauntsiz oila a'zosi, siz to'liq boshqarasiz) yoki `LINKED_ACCOUNT` (`CareLink` orqali ulangan haqiqiy akkaunt, faqat ko'rish).
+
+**Xatoliklar**: `400` validatsiya, `401/403` auth, `403` — `familyMemberId` sizga tegishli emas, `404` — `drugId` berilgan-u topilmagan/faol emas.
 
 ## 20. `GET /`
 
-O'z jadvallari ro'yxati. **Auth: JWT + `BEMOR` roli.** — `data: ScheduleResponse[]` (sahifalashsiz, to'liq ro'yxat).
+O'z jadvallari + o'zi boshqaradigan oila a'zolarining + `CareLink` orqali ulangan (faqat-ko'rish) akkauntlarning jadvallari — birlashtirilgan ro'yxat. **Auth: JWT + `BEMOR` roli.** — `data: ScheduleResponse[]` (sahifalashsiz, to'liq ro'yxat, har birida `owner` maydoni bilan kimga tegishli ekani ko'rsatiladi).
 
 ## 21. `GET /:id`
 
-Bitta jadval (faqat egasi ko'ra oladi, aks holda `404`).
+Bitta jadval — o'ziniki, oila a'zosiniki yoki ulangan akkauntniki bo'lsa ko'rsatadi, aks holda `404`.
 
 ## 22. `PATCH /:id/deactivate`
 
-Jadvalni to'xtatadi (`isActive: false`) — bundan keyin yangi `DoseEvent` yaratilmaydi, lekin avvalgi tarix saqlanib qoladi.
+Jadvalni to'xtatadi (`isActive: false`) — bundan keyin yangi `DoseEvent` yaratilmaydi, lekin avvalgi tarix saqlanib qoladi. Faqat o'ziniki yoki o'zi boshqaradigan oila a'zosiniki bo'lsa ishlaydi — `CareLink` orqali ulangan (faqat-ko'rish) akkauntning jadvalini o'zgartirishga urinish `403` qaytaradi.
 
 ---
 
@@ -551,7 +556,7 @@ Har bir yozuv — bitta jadvalning bitta aniq vaqtdagi dozasi. Fon jarayoni (`sr
 
 ## 23. `GET /`
 
-O'z dozalari ro'yxati. **Auth: JWT + `BEMOR` roli.**
+O'z dozalari + oila a'zolari + ulangan akkauntlarning dozalari (§20'dagi kabi birlashtirilgan). **Auth: JWT + `BEMOR` roli.**
 
 **Query parametrlari**: `status` (`PENDING`/`TAKEN`/`SKIPPED`), `from`/`to` (ISO sana, `scheduledAt` bo'yicha oraliq filtri), `page` (default `1`), `limit` (default `50`, maks `200`).
 
@@ -583,9 +588,9 @@ O'z dozalari ro'yxati. **Auth: JWT + `BEMOR` roli.**
 
 ## 24. `PATCH /:id/confirm`
 
-"Oldim" tugmasi — `status: TAKEN`, `confirmedAt` = hozirgi vaqt. **Auth: JWT + `BEMOR` roli**, faqat doza egasi.
+"Oldim" tugmasi — `status: TAKEN`, `confirmedAt` = hozirgi vaqt. **Auth: JWT + `BEMOR` roli**, faqat egasi yoki o'zi boshqaradigan oila a'zosi uchun.
 
-**Xatoliklar**: `404` topilmadi/boshqaniki, `409` — doza allaqachon `TAKEN`/`SKIPPED` (qayta belgilab bo'lmaydi).
+**Xatoliklar**: `404` topilmadi/umuman aloqasi yo'q, `403` — `CareLink` orqali ulangan (faqat-ko'rish) akkauntning dozasi, `409` — doza allaqachon `TAKEN`/`SKIPPED` (qayta belgilab bo'lmaydi).
 
 ## 25. `PATCH /:id/skip`
 
@@ -642,6 +647,77 @@ Berilgan dorilar to'plami ichida ma'lum bo'lgan o'zaro ta'sirlarni tekshiradi. *
 **Response — 200 OK** — topilgan juftliklar ro'yxati (`data: []`, agar hech qanday mos yozuv topilmasa — bu hozircha jadval bo'sh bo'lgani uchun normal holat).
 
 **Xatoliklar**: `400` — kamida 2 ta `drugId` kerak.
+
+---
+
+# Family moduli (`/api/v1/family`) — Oilaviy profil
+
+Base URL: `http://localhost:3001/api/v1/family`
+
+Ikki xil holatni qamrab oladi: **(a)** akkauntsiz shaxs (telefoni yo'q bola/keksa ota-ona) — guardian to'liq mustaqil boshqaradi; **(b)** haqiqiy, alohida akkaunti bor shaxs — guardian telefon raqami orqali unga **faqat-ko'rish** huquqi bilan ulanadi (jadvalni o'zgartirish faqat akkaunt egasiga qoladi — himoya talabi).
+
+## 30. `POST /members`
+
+Akkauntsiz oila a'zosi qo'shish. **Auth: JWT + `BEMOR` roli.**
+
+**Request body**
+
+```json
+{ "fullName": "Kichkina bola", "relationship": "farzand", "birthDate": "2020-05-01" }
+```
+
+`fullName` majburiy, `relationship`/`birthDate` ixtiyoriy.
+
+**Response — 201 Created** — yaratilgan `FamilyMember`.
+
+## 31. `GET /members`
+
+O'zi qo'shgan oila a'zolari ro'yxati. **Auth: JWT + `BEMOR` roli.**
+
+## 32. `DELETE /members/:id`
+
+Oila a'zosini o'chiradi (bog'liq `MedicationSchedule`lar ham kaskad o'chadi). **Xatoliklar**: `404` topilmadi/boshqaniki.
+
+## 33. `POST /links`
+
+Haqiqiy akkauntga telefon raqami orqali **darhol** (tasdiqlashsiz) ulanish. **Auth: JWT + `BEMOR` roli.**
+
+**Request body**
+
+```json
+{ "phone": "+998901234567" }
+```
+
+**Response — 201 Created**
+
+```json
+{
+  "success": true,
+  "message": "Akkauntga ulanildi",
+  "data": {
+    "id": "uuid",
+    "createdAt": "2026-08-13T10:00:00.000Z",
+    "viewer": { "id": "uuid", "fullName": "Farzand", "phone": "+998901112233" },
+    "subject": { "id": "uuid", "fullName": "Ota-ona", "phone": "+998901234567" }
+  }
+}
+```
+
+**Xatoliklar**: `400` — o'zingizga ulanib bo'lmaydi, `404` — bu raqamli foydalanuvchi topilmadi, `409` — bu akkauntga allaqachon ulangansiz.
+
+> **Bilib qo'ying**: ulanish tasdiqlashsiz, darhol yaratiladi — telefon raqamini bilgan kishi kuzatuvga ulana oladi. Bu ongli tanlov (SMS/push xabardor qilish hali yo'q), risk faqat-ko'rish huquqi bilan cheklangan (§20-22, §24-25dagi himoya qoidalari).
+
+## 34. `GET /links`
+
+Ikkala yo'nalishdagi ulanishlar. **Auth: JWT.**
+
+```json
+{ "data": { "watching": [ /* men kuzatayotgan akkauntlar */ ], "watchedBy": [ /* meni kuzatayotganlar */ ] } }
+```
+
+## 35. `DELETE /links/:id`
+
+Ulanishni bekor qiladi — **kuzatuvchi yoki kuzatiladigan, ikkalasi ham** o'chira oladi. **Xatoliklar**: `404` topilmadi/aloqasi yo'q.
 
 ---
 

@@ -1,6 +1,6 @@
 # Core Service
 
-Modular monolit: `auth`, `drug`, `prescription`, `schedule` va `dose` modullari hozircha to'liq ishlaydi. `auth` — OAuth 2.0 uslubidagi JWT autentifikatsiya (access 15 daqiqa TTL), refresh token rotation, RBAC (Bemor / Shifokor / Administrator). `drug` — dorilar katalogi (CRUD + qidiruv). `prescription` — retsept rasmini (F-002 OCR) yoki dmed QR (F-001) qabul qilib saqlaydi. `schedule`/`dose` — F-003 Smart eslatma tizimi: dori qabul qilish jadvali va "Oldim"/"O'tkazib yubordim" oqimi, soatlik qayta eslatish bilan. `notification` moduli (real SMS) kelayotgan bosqichda qo'shiladi. `ocr-service` — Gemini bilan og'ir ishlaydigan qism bo'lgani uchun ataylab alohida servis sifatida qoldirilgan, `OCR_SERVICE_URL` orqali HTTP bilan chaqiriladi.
+Modular monolit: `auth`, `drug`, `prescription`, `schedule`, `dose`, `interaction` va `family` modullari hozircha to'liq ishlaydi. `auth` — OAuth 2.0 uslubidagi JWT autentifikatsiya (access 15 daqiqa TTL), refresh token rotation, RBAC (Bemor / Shifokor / Administrator), shu jumladan admin foydalanuvchi boshqaruvi (`GET /users`, `PATCH /users/:id/status`, `POST /users/provision`). `drug` — dorilar katalogi (CRUD + qidiruv). `prescription` — retsept rasmini (F-002 OCR) yoki dmed QR (F-001) qabul qilib saqlaydi. `schedule`/`dose` — F-003 Smart eslatma tizimi: dori qabul qilish jadvali va "Oldim"/"O'tkazib yubordim" oqimi, soatlik qayta eslatish bilan. `interaction` — F-004 dori-dori o'zaro ta'sirini tekshirish (hozircha faqat struktura, admin qo'lda to'ldiradi). `family` — Oilaviy profil: akkauntsiz oila a'zolarini to'liq boshqarish + haqiqiy akkauntlarga faqat-ko'rish uchun ulanish. `notification` moduli (real SMS) kelayotgan bosqichda qo'shiladi. `ocr-service` — Gemini bilan og'ir ishlaydigan qism bo'lgani uchun ataylab alohida servis sifatida qoldirilgan, `OCR_SERVICE_URL` orqali HTTP bilan chaqiriladi.
 
 Port: **3001**.
 
@@ -29,28 +29,32 @@ src/
 │   ├── prescription.controller.ts
 │   ├── schedule.controller.ts
 │   ├── dose.controller.ts
-│   └── interaction.controller.ts
+│   ├── interaction.controller.ts
+│   └── family.controller.ts
 ├── services/
 │   ├── auth.service.ts
 │   ├── drug.service.ts
 │   ├── prescription.service.ts
 │   ├── schedule.service.ts
 │   ├── dose.service.ts
-│   └── interaction.service.ts
+│   ├── interaction.service.ts
+│   └── family.service.ts
 ├── dtos/
 │   ├── auth.dto.ts
 │   ├── drug.dto.ts
 │   ├── prescription.dto.ts
 │   ├── schedule.dto.ts
 │   ├── dose.dto.ts
-│   └── interaction.dto.ts
+│   ├── interaction.dto.ts
+│   └── family.dto.ts
 ├── routes/
 │   ├── auth.routes.ts
 │   ├── drug.routes.ts
 │   ├── prescription.routes.ts
 │   ├── schedule.routes.ts
 │   ├── dose.routes.ts
-│   └── interaction.routes.ts
+│   ├── interaction.routes.ts
+│   └── family.routes.ts
 ├── integrations/
 │   └── dmed/              # DmedAdapter, MockDmedAdapter — F-001
 ├── jobs/
@@ -101,10 +105,12 @@ To'liq API hujjati: [`docs/API.md`](docs/API.md) — `auth` moduli (`/api/v1/aut
 
 | Method | Path | Auth | Tavsif |
 |---|---|---|---|
-| POST | `/` | JWT + `BEMOR` | Dori qabul qilish jadvali yaratish (`drugName`, `scheduleTimes: ["08:00","20:00"]`, `startDate`, ixtiyoriy `drugId`/`dosageNote`/`endDate`) |
-| GET | `/` | JWT + `BEMOR` | O'z jadvallari ro'yxati |
-| GET | `/:id` | JWT + `BEMOR` | Bitta jadval (faqat egasi) |
-| PATCH | `/:id/deactivate` | JWT + `BEMOR` | Jadvalni to'xtatish (`isActive=false`, yangi doza yaratilmaydi) |
+| POST | `/` | JWT + `BEMOR` | Dori qabul qilish jadvali yaratish (`drugName`, `scheduleTimes: ["08:00","20:00"]`, `startDate`, ixtiyoriy `drugId`/`dosageNote`/`endDate`/`familyMemberId`) |
+| GET | `/` | JWT + `BEMOR` | O'z + oila a'zolari + ulangan akkauntlarning jadvallari (birlashtirilgan, `owner` maydoni bilan) |
+| GET | `/:id` | JWT + `BEMOR` | Bitta jadval (o'ziniki, oila a'zosiniki yoki ulangan akkauntniki) |
+| PATCH | `/:id/deactivate` | JWT + `BEMOR` | Jadvalni to'xtatish (`isActive=false`) — faqat o'ziniki/oila a'zosiniki, ulangan akkaunt uchun `403` |
+
+**Oilaviy profil bilan integratsiya** (batafsil: quyida `family` moduli): `familyMemberId` berilsa jadval `patientId: null` bilan, akkauntsiz oila a'zosiga bog'lanadi. `GET /` va `GET /doses` doim uchta manbadan birlashtirilgan ro'yxat qaytaradi — `owner.type`: `SELF` / `FAMILY_MEMBER` (to'liq boshqarish huquqi) / `LINKED_ACCOUNT` (`CareLink` orqali, faqat ko'rish — yozish urinishlari `403`).
 
 **Avtomatik yaratish (retsept → jadval)**: `ScheduleService.createFromPrescriptionItems(patientId, items)` — tasdiqlangan retsept (`prescription` moduli, F-001/F-002) har bir dori qatoridan avtomatik jadval yaratadi. Xatti-harakat (`src/utils/dose-parser.util.ts`):
 - `dailyDoseCount` (masalan `"2"`) → `scheduleTimes` — 08:00–22:00 oralig'ida teng taqsimlangan N ta vaqt (o'qib bo'lmasa — bitta standart `09:00`)
@@ -125,7 +131,31 @@ To'liq API hujjati: [`docs/API.md`](docs/API.md) — `auth` moduli (`/api/v1/aut
 **Ishlash mexanizmi** (`src/jobs/dose-scheduler.job.ts`, `node-cron` bilan):
 1. Har **5 daqiqada** — barcha faol jadvallar (`MedicationSchedule`) uchun, kunning shu vaqtga yetgan (`scheduleTimes`dagi HH:mm o'tgan) lekin hali `DoseEvent`i yaratilmagan dozalar avtomatik `PENDING` holatda yaratiladi.
 2. Har **soat boshida** — javob berilmagan (`PENDING`, vaqti allaqachon o'tgan) dozalar uchun qayta eslatma yuboriladi (`remindersSent` oshiriladi) — bemor "Oldim"/"O'tkazib yubordim" bosmaguncha soatlik davom etadi.
-3. Eslatma yetkazish hozircha **stub** (konsolga `[REMINDER STUB] ...` chiqadi, `forgot-password`dagi `[SMS STUB]` pattern'iga o'xshash) — real push/SMS ulanmagan, chunki mobil ilova va push infratuzilmasi hali yo'q.
+3. Eslatma yetkazish hozircha **stub** (konsolga `[REMINDER STUB] ...` chiqadi, `forgot-password`dagi `[SMS STUB]` pattern'iga o'xshash) — real push/SMS ulanmagan, chunki mobil ilova va push infratuzilmasi hali yo'q. Oila a'zosi (akkauntsiz) jadvali bo'lsa, eslatma guardian'ning raqamiga yuboriladi.
+
+### `interaction` moduli (`/api/v1/interactions`) — F-004 (soddalashtirilgan)
+
+| Method | Path | Auth | Tavsif |
+|---|---|---|---|
+| POST | `/` | JWT + `ADMINISTRATOR` | Yangi o'zaro ta'sir juftligi (`drugAId`, `drugBId`, `severity`, ixtiyoriy `description`) |
+| GET | `/` | JWT + `ADMINISTRATOR` | Ro'yxat (sahifalash bilan) |
+| DELETE | `/:id` | JWT + `ADMINISTRATOR` | O'chirish |
+| POST | `/check` | JWT | Berilgan `drugIds[]` ichida ma'lum o'zaro ta'sirlarni tekshirish (istalgan rol) |
+
+Real ma'lumot manbai (DrugBank litsenziyasi) hozircha yo'q — jadval admin tomonidan qo'lda to'ldiriladi. Juftlik doim `drugAId < drugBId` tartibida saqlanadi (`sortPair()`), A-B va B-A bir xil yozuv hisoblanishi uchun — takroriy qo'shishga urinish `409` qaytaradi.
+
+### `family` moduli (`/api/v1/family`) — Oilaviy profil
+
+| Method | Path | Auth | Tavsif |
+|---|---|---|---|
+| POST | `/members` | JWT + `BEMOR` | Akkauntsiz oila a'zosi qo'shish (`fullName`, ixtiyoriy `relationship`/`birthDate`) |
+| GET | `/members` | JWT + `BEMOR` | O'zi qo'shgan oila a'zolari |
+| DELETE | `/members/:id` | JWT + `BEMOR` | O'chirish (bog'liq jadvallar kaskad o'chadi) |
+| POST | `/links` | JWT + `BEMOR` | Haqiqiy akkauntga telefon raqami orqali **darhol** ulanish (`{ phone }`) |
+| GET | `/links` | JWT | Ikkala yo'nalish: `{ watching, watchedBy }` |
+| DELETE | `/links/:id` | JWT | Ulanishni bekor qilish (kuzatuvchi yoki kuzatiladigan, ikkalasi ham) |
+
+Ikki xil oila a'zosi holatini qamrab oladi: **akkauntsiz** shaxs (`FamilyMember`) — guardian to'liq boshqaradi; **haqiqiy akkaunti bor** shaxs (`CareLink`) — guardian faqat kuzatadi (masalan bola dorini ichdimi-yo'qmi tekshirish uchun), jadvalni o'zgartirish huquqisiz — bu ongli tanlangan himoya talabi. `CareLink` tasdiqlashsiz, telefon raqami to'g'ri bo'lsa darhol yaratiladi (SMS/push xabardor qilish hali yo'qligi sabab bilan tezlik uchun tanlangan, xavfni faqat-ko'rish cheklovi kamaytiradi).
 
 ## Eslatma
 
