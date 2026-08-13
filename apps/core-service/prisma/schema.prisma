@@ -89,9 +89,37 @@ model Drug {
   updatedAt            DateTime   @updatedAt
   prescriptionItems    PrescriptionItem[]
   medicationSchedules  MedicationSchedule[]
+  interactionsAsA      DrugInteraction[]     @relation("InteractionsAsA")
+  interactionsAsB      DrugInteraction[]     @relation("InteractionsAsB")
 
   @@index([name])
   @@map("drugs")
+}
+
+// F-004 (soddalashtirilgan) — real ma'lumot manbai (DrugBank litsenziyasi) hozircha yo'q, shuning
+// uchun bu jadval admin tomonidan qo'lda kiritiladi. Juftlik doim drugAId < drugBId tartibida
+// saqlanadi (interaction.service.ts'dagi sortPair), A-B va B-A bir xil yozuv hisoblanishi uchun.
+enum InteractionSeverity {
+  GREEN // minimal
+  YELLOW // ehtiyot bo'lish kerak
+  RED // xavfli
+}
+
+model DrugInteraction {
+  id          String              @id @default(uuid())
+  drugAId     String
+  drugA       Drug                @relation("InteractionsAsA", fields: [drugAId], references: [id], onDelete: Cascade)
+  drugBId     String
+  drugB       Drug                @relation("InteractionsAsB", fields: [drugBId], references: [id], onDelete: Cascade)
+  severity    InteractionSeverity
+  description String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@unique([drugAId, drugBId])
+  @@index([drugAId])
+  @@index([drugBId])
+  @@map("drug_interactions")
 }
 
 enum PrescriptionStatus {

@@ -1,4 +1,4 @@
-import { User } from "@prisma/client";
+import { Prisma, User } from "@prisma/client";
 import { prisma } from "../config/prisma.client";
 import { env } from "../config/env.config";
 import { AppError } from "../utils/app-error.util";
@@ -6,13 +6,31 @@ import { hashPassword, comparePassword } from "../utils/password.util";
 import { signAccessToken } from "../utils/jwt.util";
 import { generateRefreshToken, hashRefreshToken } from "../utils/refresh-token.util";
 import { generateOtpCode, hashOtpCode } from "../utils/otp.util";
-import { AuthResponse, AuthUserResponse, ForgotPasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from "../dtos/auth.dto";
+import {
+    AdminUserResponse,
+    AuthResponse,
+    AuthUserResponse,
+    ForgotPasswordDto,
+    ListUsersQueryDto,
+    LoginDto,
+    ProvisionUserDto,
+    RegisterDto,
+    ResetPasswordDto,
+    UpdateUserStatusDto,
+    UserListResponse
+} from "../dtos/auth.dto";
 
 const toUserResponse = (user: User): AuthUserResponse => ({
     id: user.id,
     phone: user.phone,
     fullName: user.fullName,
     role: user.role
+});
+
+const toAdminUserResponse = (user: User): AdminUserResponse => ({
+    ...toUserResponse(user),
+    isActive: user.isActive,
+    createdAt: user.createdAt
 });
 const issueTokens = async (user: User): Promise<AuthResponse["tokens"]> => {
     const accessToken = signAccessToken({ sub: user.id, role: user.role });
@@ -107,6 +125,58 @@ export class AuthService {
             throw new AppError(404, "Foydalanuvchi topilmadi");
         }
         return toUserResponse(user);
+    }
+
+    public static async listUsers(query: ListUsersQueryDto): Promise<UserListResponse> {
+        const { role, isActive, search, page, limit } = query;
+
+        const where: Prisma.UserWhereInput = {
+            ...(role && { role }),
+            ...(isActive !== undefined && { isActive }),
+            ...(search && {
+                OR: [
+                    { phone: { contains: search, mode: "insensitive" } },
+                    { fullName: { contains: search, mode: "insensitive" } }
+                ]
+            })
+        };
+
+        const [items, total] = await prisma.$transaction([
+            prisma.user.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { createdAt: "desc" } }),
+            prisma.user.count({ where })
+        ]);
+
+        return { items: items.map(toAdminUserResponse), total, page, limit };
+    }
+
+    public static async updateUserStatus(id: string, dto: UpdateUserStatusDto): Promise<AdminUserResponse> {
+        const existing = await prisma.user.findUnique({ where: { id } });
+        if (!existing) {
+            throw new AppError(404, "Foydalanuvchi topilmadi");
+        }
+
+        const user = await prisma.user.update({ where: { id }, data: { isActive: dto.isActive } });
+
+        if (!dto.isActive) {
+            // Bloklangan foydalanuvchining barcha sessiyalari bekor qilinadi (majburiy chiqish)
+            await prisma.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+        }
+
+        return toAdminUserResponse(user);
+    }
+
+    public static async provision(dto: ProvisionUserDto): Promise<AdminUserResponse> {
+        const existing = await prisma.user.findUnique({ where: { phone: dto.phone } });
+        if (existing) {
+            throw new AppError(409, "Bu telefon raqami bilan foydalanuvchi allaqachon mavjud");
+        }
+
+        const passwordHash = await hashPassword(dto.password);
+        const user = await prisma.user.create({
+            data: { phone: dto.phone, passwordHash, fullName: dto.fullName, role: dto.role }
+        });
+
+        return toAdminUserResponse(user);
     }
 
     public static async forgotPassword(dto: ForgotPasswordDto): Promise<void> {

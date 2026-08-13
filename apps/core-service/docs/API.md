@@ -197,6 +197,63 @@ Muvaffaqiyatli reset'dan so'ng foydalanuvchining **barcha refresh tokenlari beko
 
 ---
 
+## Admin — foydalanuvchilarni boshqarish (`/api/v1/auth/users`)
+
+Barchasi **Auth: JWT + `ADMINISTRATOR` roli**.
+
+### 26. `GET /users`
+
+Foydalanuvchilar ro'yxati.
+
+**Query parametrlari**: `role` (`BEMOR`/`SHIFOKOR`/`ADMINISTRATOR`), `isActive` (boolean), `search` (telefon yoki F.I.Sh bo'yicha), `page` (default `1`), `limit` (default `20`, maks `100`).
+
+**Response — 200 OK**
+
+```json
+{
+  "success": true,
+  "message": "OK",
+  "data": {
+    "items": [
+      { "id": "uuid", "phone": "+998901234567", "fullName": "Aliyev Vali", "role": "BEMOR", "isActive": true, "createdAt": "2026-08-01T10:00:00.000Z" }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+### 27. `PATCH /users/:id/status`
+
+Foydalanuvchini bloklash/aktivlashtirish.
+
+**Request body**
+
+```json
+{ "isActive": false }
+```
+
+`isActive: false` qilinganda foydalanuvchining **barcha faol refresh tokenlari bekor qilinadi** (majburiy chiqish — barcha qurilmalardan).
+
+**Xatoliklar**: `400` validatsiya, `401/403` auth, `404` topilmadi.
+
+### 28. `POST /users/provision`
+
+`SHIFOKOR` yoki `ADMINISTRATOR` akkaunt yaratish (`BEMOR` — ochiq `POST /register` orqali yaratiladi, bu yerda kerak emas).
+
+**Request body**
+
+```json
+{ "phone": "+998901234567", "password": "SuperSecret123", "fullName": "Dr. Aliyev", "role": "SHIFOKOR" }
+```
+
+**Response — 201 Created** — yaratilgan foydalanuvchi (`GET /users` bilan bir xil shakl, lekin bitta obyekt).
+
+**Xatoliklar**: `400` validatsiya (`role` faqat `SHIFOKOR`/`ADMINISTRATOR`), `401/403` auth, `409` — shu telefon raqami bilan foydalanuvchi allaqachon mavjud.
+
+---
+
 # Drug moduli (`/api/v1/drugs`)
 
 Base URL: `http://localhost:3001/api/v1/drugs`
@@ -533,6 +590,58 @@ O'z dozalari ro'yxati. **Auth: JWT + `BEMOR` roli.**
 ## 25. `PATCH /:id/skip`
 
 "O'tkazib yubordim" tugmasi — `status: SKIPPED`. Xatoliklar `confirm` bilan bir xil.
+
+---
+
+# Interaction moduli (`/api/v1/interactions`) — F-004 (soddalashtirilgan)
+
+Base URL: `http://localhost:3001/api/v1/interactions`
+
+> **Hozircha faqat struktura**: real ma'lumot manbai (DrugBank litsenziyasi) hal qilinmagan. Bu modul dori-dori o'zaro ta'sirini **admin qo'lda kiritgan** juftliklar asosida tekshiradi — avtomatik/AI-based aniqlash emas. Jadval bo'sh boshlanadi, admin vaqt o'tishi bilan to'ldiradi.
+
+## 26. `POST /`
+
+Yangi o'zaro ta'sir juftligi qo'shish. **Auth: JWT + `ADMINISTRATOR` roli.**
+
+**Request body**
+
+```json
+{ "drugAId": "uuid-1", "drugBId": "uuid-2", "severity": "RED", "description": "Qon ketish xavfini oshiradi" }
+```
+
+`severity`: `GREEN` (minimal) / `YELLOW` (ehtiyot bo'lish kerak) / `RED` (xavfli).
+
+**Response — 201 Created** — yaratilgan yozuv.
+
+**Xatoliklar**
+| Status | Sabab |
+|--------|-------|
+| 400 | Validatsiya (`drugAId === drugBId` va h.k.) |
+| 401/403 | Auth yo'q yoki `ADMINISTRATOR` emas |
+| 404 | `drugAId`/`drugBId`dan biri topilmadi |
+| 409 | Shu ikki dori uchun yozuv allaqachon mavjud (tartibdan qat'i nazar — A-B va B-A bir xil hisoblanadi) |
+
+## 27. `GET /`
+
+Barcha yozuvlar ro'yxati (sahifalash bilan). **Auth: JWT + `ADMINISTRATOR` roli.**
+
+## 28. `DELETE /:id`
+
+Yozuvni o'chiradi. **Auth: JWT + `ADMINISTRATOR` roli.**
+
+## 29. `POST /check`
+
+Berilgan dorilar to'plami ichida ma'lum bo'lgan o'zaro ta'sirlarni tekshiradi. **Auth: JWT** (istalgan rol — bemor ham o'z dorilarini tekshira oladi).
+
+**Request body**
+
+```json
+{ "drugIds": ["uuid-1", "uuid-2", "uuid-3"] }
+```
+
+**Response — 200 OK** — topilgan juftliklar ro'yxati (`data: []`, agar hech qanday mos yozuv topilmasa — bu hozircha jadval bo'sh bo'lgani uchun normal holat).
+
+**Xatoliklar**: `400` — kamida 2 ta `drugId` kerak.
 
 ---
 

@@ -28,25 +28,29 @@ src/
 │   ├── drug.controller.ts
 │   ├── prescription.controller.ts
 │   ├── schedule.controller.ts
-│   └── dose.controller.ts
+│   ├── dose.controller.ts
+│   └── interaction.controller.ts
 ├── services/
 │   ├── auth.service.ts
 │   ├── drug.service.ts
 │   ├── prescription.service.ts
 │   ├── schedule.service.ts
-│   └── dose.service.ts
+│   ├── dose.service.ts
+│   └── interaction.service.ts
 ├── dtos/
 │   ├── auth.dto.ts
 │   ├── drug.dto.ts
 │   ├── prescription.dto.ts
 │   ├── schedule.dto.ts
-│   └── dose.dto.ts
+│   ├── dose.dto.ts
+│   └── interaction.dto.ts
 ├── routes/
 │   ├── auth.routes.ts
 │   ├── drug.routes.ts
 │   ├── prescription.routes.ts
 │   ├── schedule.routes.ts
-│   └── dose.routes.ts
+│   ├── dose.routes.ts
+│   └── interaction.routes.ts
 ├── integrations/
 │   └── dmed/              # DmedAdapter, MockDmedAdapter — F-001
 ├── jobs/
