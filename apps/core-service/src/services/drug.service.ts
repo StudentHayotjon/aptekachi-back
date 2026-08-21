@@ -82,8 +82,15 @@ export class DrugService {
             throw new AppError(404, "Dori topilmadi");
         }
 
-        const drug = await prisma.drug.update({ where: { id }, data: dto });
-        return toDrugResponse(drug);
+        try {
+            const drug = await prisma.drug.update({ where: { id }, data: dto });
+            return toDrugResponse(drug);
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+                throw new AppError(409, "Bu shtrix-kod bilan boshqa dori allaqachon mavjud");
+            }
+            throw error;
+        }
     }
 
     public static async remove(id: string): Promise<void> {
