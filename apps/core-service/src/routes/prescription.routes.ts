@@ -4,7 +4,7 @@ import { PrescriptionController } from "../controllers/prescription.controller";
 import { validate } from "../middleware/validate.middleware";
 import { authenticate } from "../middleware/auth.middleware";
 import { authorize } from "../middleware/rbac.middleware";
-import { uploadMiddleware } from "../middleware/upload.middleware";
+import { uploadSingle } from "../middleware/upload.middleware";
 import { dmedImportSchema, rejectPrescriptionSchema } from "../dtos/prescription.dto";
 
 export const prescriptionRouter = Router();
@@ -13,7 +13,7 @@ prescriptionRouter.post(
     "/",
     authenticate,
     authorize(Role.BEMOR),
-    uploadMiddleware.single("file"),
+    uploadSingle("file"),
     PrescriptionController.create
 );
 prescriptionRouter.post(
