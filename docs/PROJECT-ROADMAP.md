@@ -60,7 +60,9 @@ TZ'ning o'zi "MVP" deb atagan qism (§9) ham quyidagilarni talab qiladi: iOS (Sw
    - To'liq API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) § Interaction moduli
 3.1. ~~**Admin foydalanuvchi boshqaruvi**~~ — ✅ tayyor — `GET /auth/users` (filter+sahifalash), `PATCH /auth/users/:id/status` (deaktivatsiya — faol refresh tokenlarni ham bekor qiladi), `POST /auth/users/provision` (SHIFOKOR/ADMINISTRATOR to'g'ridan-to'g'ri yaratish). Real bazada tekshirildi
 3.2. ~~**Oilaviy profil**~~ — ✅ tayyor — `family` moduli: akkauntsiz oila a'zosi (`FamilyMember`, guardian to'liq boshqaradi) + haqiqiy akkauntga faqat-ko'rish uchun ulanish (`CareLink`, telefon orqali darhol, tasdiqlashsiz — ongli tanlangan himoya kelishuvi). `schedule`/`dose` modullari kengaytirildi: `GET /schedules`, `GET /doses` endi uchta manbadan (o'zi/oila a'zosi/ulangan akkaunt) birlashtirilgan ro'yxat qaytaradi, `owner` maydoni bilan. Yozish (create/deactivate/confirm/skip) faqat o'ziniki va oila a'zosiniki uchun — ulangan haqiqiy akkauntga urinish `403`. Real bazada to'liq E2E (ikkala yo'nalish + salbiy holat) tekshirildi. To'liq API: [`apps/core-service/docs/API.md`](../apps/core-service/docs/API.md) § Family moduli
-3.3. **Ramazon mode** (F-003 kengaytmasi) ← **keyingi qadam** — reja tasdiqlangan, hali qurilmagan: `User.ramazonModeEnabled`, `PATCH /auth/me/ramazon-mode`, ro'za oyida qabul vaqtlarini iftor/saharlik atrofiga dinamik qayta taqsimlash (`dose-scheduler.job.ts` ichida)
+3.3. **Ramazon mode** (F-003 kengaytmasi, 💰 **Premium**) ← **keyingi qadam** — reja tasdiqlangan, hali qurilmagan: `User.ramazonModeEnabled`, `PATCH /auth/me/ramazon-mode`, ro'za oyida qabul vaqtlarini iftor/saharlik atrofiga dinamik qayta taqsimlash (`dose-scheduler.job.ts` ichida). Funksiyaning o'zi avval quriladi — pullash (feature-gate) keyinroq, subscription infratuzilmasi bilan birga qo'shiladi (§6)
+3.4. **Refill alert** (F-003 kengaytmasi, 💰 **Premium**) — hali qurilmagan, §5da qayd etilgan
+3.5. **Eslatma oqimiga drug-interaction ogohlantirish** (F-003↔F-004 bog'lanishi, 💰 **Premium**) — hali qurilmagan, §5da qayd etilgan
 4. **Frontend — hali boshlanmagan, ataylab keyinga qoldirilgan**
    - Muhokama qilingan, lekin qaror: backend ustida davom etish (F-004 va h.k.), frontend ishi keyingi bosqichda
    - **Muhim aniqlangan tafovut (frontend boshlanganda hisobga olinsin)**: "internet o'chirilganda ham aniq vaqtda bildirishnoma" talabi PWA bilan **to'liq kafolatlanmaydi** — iOS Safari/PWA `Notification Triggers API`ni umuman qo'llab-quvvatlamaydi, Android Chrome'da ham eksperimental. TZ shuning uchun aynan native (`UNNotificationCenter` / `AlarmManager`) tanlagan. Frontend ishi boshlanganda PWA vs native (kamida Android) tanlovi **qayta ko'rib chiqilishi kerak**, ayniqsa TZ'ning o'zi "Internet yo'qligi — Yuqori (viloyatlar)" xavfini alohida qayd etgani uchun
@@ -94,6 +96,15 @@ TZ'ning o'zi "MVP" deb atagan qism (§9) ham quyidagilarni talab qiladi: iOS (Sw
 
 ---
 
-## 6. Monetizatsiya (TZ §11, ma'lumot uchun — MVP uchun emas)
+## 6. Monetizatsiya (TZ §11)
 
-Freemium (Bemor, bepul/15,000 UZS/oy), Shifokor PRO (35,000 UZS/oy), Apteka Partner (50,000 UZS/oy/apteka — panel+API, **sotib olish emas**), Korporativ/Government. MVP bosqichida monetizatsiya qurilmaydi, faqat kelajakdagi yo'nalish sifatida qayd etiladi.
+Freemium (Bemor, bepul/15,000 UZS/oy), Shifokor PRO (35,000 UZS/oy), Apteka Partner (50,000 UZS/oy/apteka — panel+API, **sotib olish emas**), Korporativ/Government.
+
+**Bemor bepul vs Premium bo'linishi — 2026-08-13 qarori**: TZ narxlashni belgilagan, lekin "qaysi funksiya qaysi rejada" deb aniqlashtirmagan — bu loyihaning o'z qarori. Ikkita toifa aniq ajratildi:
+
+| Toifa | Funksiyalar | Sabab |
+|---|---|---|
+| **Har doim bepul/majburiy** | 16 yoshgacha ota-ona roziligi tekshiruvi, OCR rasm 30-daq avto-o'chirish | Bular TZ §6 **huquqiy talab** — pullik/bepul rejadan qat'iy nazar barcha foydalanuvchi uchun majburiy, pullik qismga qo'yib bo'lmaydi |
+| **💰 Premium (Bemor rejasi)** | Ramazon mode, Refill alert, Eslatma oqimidagi drug-interaction ogohlantirish | Qulaylik/qo'shimcha funksiyalar — pullik qatlamga tabiiy mos (Medisafe/MyTherapy'dagi o'xshash funksiyalar ham odatda premium) |
+
+**Amalga oshirish tartibi (2026-08-13 qarori)**: hozircha faqat shu bo'linish **hujjatlashtiriladi** — subscription/to'lov infratuzilmasi (`User.subscriptionTier`, feature-gate middleware, Payme/Click integratsiyasi) hali **qurilmaydi**. Avval uchala funksiya (Ramazon mode, Refill alert, interaction-alert) bepul rejimda to'liq ishlab chiqiladi va tekshiriladi, pullash keyingi, alohida bosqichda qo'shiladi — bu funksiyalarning o'zini kechiktirmaslik uchun.
