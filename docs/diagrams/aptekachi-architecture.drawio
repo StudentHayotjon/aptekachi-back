@@ -1,0 +1,286 @@
+<mxfile host="app.diagrams.net" agent="aptekachi-doc-generator" pages="3">
+  <diagram id="page1" name="1 - Arxitektura">
+    <mxGraphModel dx="1178" dy="648" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="p1_client" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="Mobil ilova / PWA klient&lt;br/&gt;(hali qurilmagan — kelayotgan bosqich)" vertex="1">
+          <mxGeometry height="60" width="320" x="500" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_core" parent="1" style="swimlane;rounded=0;whiteSpace=wrap;html=1;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;fontStyle=1;verticalAlign=top;" value="core-service — Express modular monolit (port 3001)" vertex="1">
+          <mxGeometry height="400" width="900" x="60" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_auth" parent="p1_core" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="auth&lt;br/&gt;JWT + refresh rotation&lt;br/&gt;RBAC (Bemor/Shifokor/Admin)&lt;br/&gt;+ admin foydalanuvchi boshqaruvi" vertex="1">
+          <mxGeometry height="70" width="190" x="30" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_drug" parent="p1_core" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="drug&lt;br/&gt;Dori katalogi (CRUD)&lt;br/&gt;+ fuzzy-match helper" vertex="1">
+          <mxGeometry height="70" width="190" x="245" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_prescription" parent="p1_core" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="prescription&lt;br/&gt;OCR (F-002) / dmed QR (F-001)&lt;br/&gt;import + tasdiqlash" vertex="1">
+          <mxGeometry height="70" width="190" x="460" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_schedule" parent="p1_core" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="schedule&lt;br/&gt;F-003 dori qabul jadvali" vertex="1">
+          <mxGeometry height="70" width="190" x="675" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_dose" parent="p1_core" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="dose&lt;br/&gt;&quot;Oldim&quot;/&quot;O&#39;tkazib yubordim&quot;" vertex="1">
+          <mxGeometry height="70" width="190" x="30" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_family" parent="p1_core" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="family&lt;br/&gt;Oilaviy profil&lt;br/&gt;FamilyMember + CareLink" vertex="1">
+          <mxGeometry height="70" width="190" x="245" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="OyPuI6oSVRlXP8kvYfTI-1" edge="1" parent="p1_core" source="p1_interaction" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="p1_family" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_interaction" parent="p1_core" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="interaction&lt;br/&gt;F-004 dori o&#39;zaro ta&#39;siri&lt;br/&gt;(struktura)" vertex="1">
+          <mxGeometry height="70" width="190" x="460" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_jobs" parent="p1_core" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;align=center;verticalAlign=middle;dashed=1;" value="jobs / dose-scheduler&lt;br/&gt;node-cron fon jarayoni" vertex="1">
+          <mxGeometry height="70" width="190" x="675" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_prisma" parent="p1_core" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=center;verticalAlign=middle;" value="Prisma Client (barcha modullar uchun umumiy DB qavati)" vertex="1">
+          <mxGeometry height="50" width="835" x="30" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_ocr" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=center;verticalAlign=middle;" value="ocr-service&lt;br/&gt;Gemini asosida OCR (port 3000)&lt;br/&gt;alohida deploy qilingan" vertex="1">
+          <mxGeometry height="90" width="260" x="1030" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_dmed" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=center;verticalAlign=middle;" value="DmedAdapter (mock)&lt;br/&gt;src/integrations/dmed/&lt;br/&gt;real api.dmed.uz — muzokarada" vertex="1">
+          <mxGeometry height="80" width="260" x="1030" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_db" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;align=center;verticalAlign=middle;boundedLbl=1;" value="PostgreSQL (Supabase)&lt;br/&gt;aws-0-ap-southeast-1" vertex="1">
+          <mxGeometry height="90" width="300" x="380" y="620" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_e1" edge="1" parent="1" source="p1_client" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=block;elbow=vertical;" target="p1_core" value="REST /api/v1/*  (JWT Bearer)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_e2" edge="1" parent="1" source="p1_prescription" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=block;elbow=vertical;" target="p1_ocr" value="HTTP multipart&lt;br/&gt;(retsept rasm skan)">
+          <mxGeometry relative="1" x="0.697" y="-35" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p1_e3" edge="1" parent="1" source="p1_prescription" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=block;elbow=vertical;" target="p1_dmed" value="UUID → retsept ma&#39;lumoti&lt;br/&gt;(DMED_MODE=mock)">
+          <mxGeometry relative="1" x="-0.0092" y="45" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p1_e4" edge="1" parent="1" source="p1_prescription" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=block;elbow=vertical;" target="p1_schedule" value="createFromPrescriptionItems()&lt;br/&gt;(tasdiqlanganda avtomatik)">
+          <mxGeometry relative="1" x="0.6" y="65" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p1_e5" edge="1" parent="1" source="p1_prescription" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=block;elbow=vertical;" target="p1_drug" value="findBestDrugMatch()&lt;br/&gt;Levenshtein fuzzy-match">
+          <mxGeometry relative="1" x="-0.2" y="45" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p1_e6" edge="1" parent="1" source="p1_schedule" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=block;elbow=vertical;" target="p1_family" value="resolveFamilyMemberIds()&lt;br/&gt;resolveLinkedSubjectIds()">
+          <mxGeometry relative="1" x="0.025" y="-45" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p1_e7" edge="1" parent="1" source="p1_dose" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=block;elbow=vertical;" target="p1_family" value="resolveFamilyMemberIds()&lt;br/&gt;resolveLinkedSubjectIds()">
+          <mxGeometry relative="1" x="-0.2" y="-55" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p1_e8" edge="1" parent="1" source="p1_jobs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=block;dashed=1;elbow=vertical;" target="p1_schedule" value="har 5 daq: faol jadvallarni o&#39;qiydi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p1_e9" edge="1" parent="1" source="p1_jobs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=block;dashed=1;elbow=vertical;" target="p1_dose" value="DoseEvent yaratadi / har soat nag qiladi">
+          <mxGeometry relative="1" x="-0.011" y="55" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="p1_e10" edge="1" parent="1" source="p1_core" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=block;elbow=vertical;" target="p1_db" value="Prisma Client">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="page2" name="2 - Baza (ER diagram)">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="p2_user" value="&lt;b style=&quot;font-size:12px&quot;&gt;User&lt;/b&gt;&lt;hr size=&quot;1&quot;/&gt;id (PK)&lt;br/&gt;phone (unique)&lt;br/&gt;passwordHash&lt;br/&gt;fullName&lt;br/&gt;role: BEMOR | SHIFOKOR | ADMINISTRATOR&lt;br/&gt;isActive&lt;br/&gt;createdAt / updatedAt" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;spacingBottom=8;fillColor=#ffffff;strokeColor=#333333;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="620" y="20" width="260" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_refresh" value="&lt;b style=&quot;font-size:12px&quot;&gt;RefreshToken&lt;/b&gt;&lt;hr size=&quot;1&quot;/&gt;id (PK)&lt;br/&gt;userId (FK → User)&lt;br/&gt;tokenHash (unique)&lt;br/&gt;expiresAt&lt;br/&gt;revokedAt" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;spacingBottom=8;fillColor=#ffffff;strokeColor=#333333;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="260" y="20" width="250" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_reset" value="&lt;b style=&quot;font-size:12px&quot;&gt;PasswordResetToken&lt;/b&gt;&lt;hr size=&quot;1&quot;/&gt;id (PK)&lt;br/&gt;userId (FK → User)&lt;br/&gt;codeHash&lt;br/&gt;expiresAt&lt;br/&gt;usedAt" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;spacingBottom=8;fillColor=#ffffff;strokeColor=#333333;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="260" y="190" width="250" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_familymember" value="&lt;b style=&quot;font-size:12px&quot;&gt;FamilyMember&lt;/b&gt;&lt;hr size=&quot;1&quot;/&gt;id (PK)&lt;br/&gt;guardianId (FK → User)&lt;br/&gt;fullName&lt;br/&gt;relationship&lt;br/&gt;birthDate" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;spacingBottom=8;fillColor=#ffffff;strokeColor=#333333;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="20" width="260" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_carelink" value="&lt;b style=&quot;font-size:12px&quot;&gt;CareLink&lt;/b&gt;&lt;hr size=&quot;1&quot;/&gt;id (PK)&lt;br/&gt;viewerId (FK → User)&lt;br/&gt;subjectId (FK → User)&lt;br/&gt;unique(viewerId, subjectId)&lt;br/&gt;darhol yaratiladi, tasdiqlashsiz" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;spacingBottom=8;fillColor=#ffffff;strokeColor=#333333;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="200" width="260" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_drug" value="&lt;b style=&quot;font-size:12px&quot;&gt;Drug&lt;/b&gt;&lt;hr size=&quot;1&quot;/&gt;id (PK)&lt;br/&gt;name&lt;br/&gt;internationalName (INN)&lt;br/&gt;manufacturer&lt;br/&gt;dosageForm: enum&lt;br/&gt;price / stock&lt;br/&gt;barcode (unique)&lt;br/&gt;isActive" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;spacingBottom=8;fillColor=#ffffff;strokeColor=#333333;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="400" width="260" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_interaction" value="&lt;b style=&quot;font-size:12px&quot;&gt;DrugInteraction&lt;/b&gt;&lt;hr size=&quot;1&quot;/&gt;id (PK)&lt;br/&gt;drugAId (FK → Drug)&lt;br/&gt;drugBId (FK → Drug)&lt;br/&gt;severity: GREEN|YELLOW|RED&lt;br/&gt;unique(drugAId, drugBId)&lt;br/&gt;drugAId &amp;lt; drugBId (sortPair)" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;spacingBottom=8;fillColor=#ffffff;strokeColor=#333333;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="660" width="260" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_prescription" value="&lt;b style=&quot;font-size:12px&quot;&gt;Prescription&lt;/b&gt;&lt;hr size=&quot;1&quot;/&gt;id (PK)&lt;br/&gt;patientId (FK → User)&lt;br/&gt;doctorId (FK → User, null)&lt;br/&gt;source: OCR | DMED_QR&lt;br/&gt;dmedUuid (unique, null)&lt;br/&gt;status: PENDING|APPROVED|REJECTED" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;spacingBottom=8;fillColor=#ffffff;strokeColor=#333333;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="620" y="260" width="280" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_prescitem" value="&lt;b style=&quot;font-size:12px&quot;&gt;PrescriptionItem&lt;/b&gt;&lt;hr size=&quot;1&quot;/&gt;id (PK)&lt;br/&gt;prescriptionId (FK → Prescription)&lt;br/&gt;drugId (FK → Drug, null)&lt;br/&gt;drugNameRaw&lt;br/&gt;dailyDoseCount / duration / regimen&lt;br/&gt;+ boshqa OCR maydonlari..." style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;spacingBottom=8;fillColor=#ffffff;strokeColor=#333333;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="620" y="510" width="300" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_schedule" value="&lt;b style=&quot;font-size:12px&quot;&gt;MedicationSchedule&lt;/b&gt;&lt;hr size=&quot;1&quot;/&gt;id (PK)&lt;br/&gt;patientId (FK → User, null)&lt;br/&gt;familyMemberId (FK → FamilyMember, null)&lt;br/&gt;drugId (FK → Drug, null)&lt;br/&gt;prescriptionItemId (FK, unique, null)&lt;br/&gt;drugName / scheduleTimes[]&lt;br/&gt;startDate / endDate / isActive" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;spacingBottom=8;fillColor=#ffffff;strokeColor=#333333;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="620" y="810" width="300" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_dose" value="&lt;b style=&quot;font-size:12px&quot;&gt;DoseEvent&lt;/b&gt;&lt;hr size=&quot;1&quot;/&gt;id (PK)&lt;br/&gt;scheduleId (FK → MedicationSchedule)&lt;br/&gt;scheduledAt&lt;br/&gt;status: PENDING|TAKEN|SKIPPED&lt;br/&gt;remindersSent / lastReminderAt&lt;br/&gt;unique(scheduleId, scheduledAt)" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;spacingBottom=8;fillColor=#ffffff;strokeColor=#333333;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="620" y="1120" width="280" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r1" value="1 — N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_user" target="p2_refresh">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r2" value="1 — N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_user" target="p2_reset">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r3" value="1 — N (patientId)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_user" target="p2_prescription">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r4" value="0..1 — N (doctorId)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_user" target="p2_prescription">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r5" value="0..1 — N (patientId)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_user" target="p2_schedule">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r6" value="1 — N (guardianId)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_user" target="p2_familymember">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r7" value="1 — N (viewerId)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_user" target="p2_carelink">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r8" value="1 — N (subjectId)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_user" target="p2_carelink">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r9" value="0..1 — N (drugId)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_drug" target="p2_prescitem">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r10" value="0..1 — N (drugId)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_drug" target="p2_schedule">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r11" value="1 — N (drugAId)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_drug" target="p2_interaction">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r12" value="1 — N (drugBId)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_drug" target="p2_interaction">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r13" value="1 — N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_prescription" target="p2_prescitem">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r14" value="0..1 — 0..1&lt;br/&gt;(prescriptionItemId, unique)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_prescitem" target="p2_schedule">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r15" value="0..1 — N (familyMemberId)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_familymember" target="p2_schedule">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p2_r16" value="1 — N (scheduleId)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=9;endArrow=none;startArrow=none;strokeColor=#333333;" edge="1" parent="1" source="p2_schedule" target="p2_dose">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="page3" name="3 - Asosiy oqimlar">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="p3_a1" value="1. Bemor: retsept rasmini yuklaydi (OCR)&lt;br/&gt;yoki dmed QR skan qiladi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_a2" value="2. prescription.service:&lt;br/&gt;OCR → ocr-service (Gemini)&lt;br/&gt;dmed → DmedAdapter (mock)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="180" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_ea1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;endArrow=block;" edge="1" parent="1" source="p3_a1" target="p3_a2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_a3" value="3. Har bir dori qatori uchun:&lt;br/&gt;drug-matcher.util (Levenshtein)&lt;br/&gt;→ Drug katalogidan drugId topadi (yoki null)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_ea2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;endArrow=block;" edge="1" parent="1" source="p3_a2" target="p3_a3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_a4" value="4. Shifokor tasdiqlaydi (OCR)&lt;br/&gt;yoki dmed avtomatik APPROVED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="420" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_ea3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;endArrow=block;" edge="1" parent="1" source="p3_a3" target="p3_a4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_a5" value="5. schedule.service.createFromPrescriptionItems()&lt;br/&gt;dose-parser.util → scheduleTimes/endDate&lt;br/&gt;MedicationSchedule yaratiladi (halokatga uchramaydi)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="540" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_ea4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;endArrow=block;" edge="1" parent="1" source="p3_a4" target="p3_a5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_a6" value="6. dose-scheduler.job (cron, har 5 daq)&lt;br/&gt;vaqti kelgan DoseEvent (PENDING) yaratadi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="660" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_ea5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;endArrow=block;" edge="1" parent="1" source="p3_a5" target="p3_a6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_a7" value="7. Bemor &quot;Oldim&quot;/&quot;O&#39;tkazib yubordim&quot; bosadi&lt;br/&gt;aks holda har soat qayta eslatiladi (stub)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="40" y="780" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_ea6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;endArrow=block;" edge="1" parent="1" source="p3_a6" target="p3_a7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_a_title" value="A) Retsept → avtomatik jadval → eslatma" style="text;html=1;fontSize=13;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="15" width="340" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_b_title" value="B) Oilaviy profil ruxsat oqimi" style="text;html=1;fontSize=13;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="460" y="15" width="420" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_b1" value="1. Guardian: FamilyMember qo&#39;shadi (akkauntsiz)&lt;br/&gt;YOKI CareLink orqali telefon bilan&lt;br/&gt;haqiqiy akkauntga ulanadi (darhol, tasdiqlashsiz)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="460" y="60" width="420" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_b2" value="2. GET /schedules yoki /doses so&#39;ralganda:&lt;br/&gt;resolveFamilyMemberIds() + resolveLinkedSubjectIds()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="460" y="180" width="420" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_b3" value="3. Natija birlashtiriladi:&lt;br/&gt;SELF (o&#39;zi) + FAMILY_MEMBER (to&#39;liq huquq)&lt;br/&gt;+ LINKED_ACCOUNT (faqat o&#39;qish)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="460" y="290" width="420" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_b4" value="Yozish amali&lt;br/&gt;(create / deactivate / confirm / skip)?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="500" y="420" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_b5" value="owner = SELF yoki&lt;br/&gt;FAMILY_MEMBER" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="460" y="560" width="190" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_b6" value="owner = LINKED_ACCOUNT&lt;br/&gt;(haqiqiy, ulangan akkaunt)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="690" y="560" width="190" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_b7" value="✅ Ruxsat berildi&lt;br/&gt;(200/201)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="460" y="670" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_b8" value="❌ 403 — faqat ko&#39;rish&lt;br/&gt;uchun ulangan" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="690" y="670" width="190" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_eb1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;endArrow=block;" edge="1" parent="1" source="p3_b1" target="p3_b2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_eb2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;endArrow=block;" edge="1" parent="1" source="p3_b2" target="p3_b3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_eb3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;endArrow=block;" edge="1" parent="1" source="p3_b3" target="p3_b4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_eb4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;endArrow=block;" edge="1" parent="1" source="p3_b4" target="p3_b5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_eb5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;endArrow=block;" edge="1" parent="1" source="p3_b4" target="p3_b6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_eb6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;endArrow=block;" edge="1" parent="1" source="p3_b5" target="p3_b7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="p3_eb7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=10;endArrow=block;" edge="1" parent="1" source="p3_b6" target="p3_b8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
