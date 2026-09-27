@@ -1,0 +1,1595 @@
+{
+  "info": {
+    "name": "Aptekachi API — core-service",
+    "description": "Backend to'liq E2E audit asosida generatsiya qilingan (2026-08-21). Base URL: http://localhost:3001/api/v1. Ishlatish tartibi: (1) \"Register (Bemor)\" so'rovini yuboring — accessToken avtomatik saqlanadi. (2) Admin/Shifokor huquqli so'rovlar uchun avval DB'ga to'g'ridan-to'g'ri ADMINISTRATOR seed qilinishi kerak (public endpoint orqali yaratib bo'lmaydi), keyin uning login javobidagi accessToken'ni qo'lda `adminAccessToken` collection o'zgaruvchisiga qo'ying — shundan keyin \"[Admin] Provision User\" + \"Login (Shifokor)\" avtomatik ishlaydi. Har bir so'rovda status-kodlar, huquq talablari va aniqlangan chekka holatlar tavsifda yozilgan.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminAccessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "shifokorAccessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bemorId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bemorPhone",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "shifokorPhone",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "targetUserId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "drugId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "drugId2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "prescriptionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "scheduleId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "doseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "interactionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "familyMemberId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "careLinkId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "description": "JWT autentifikatsiya (access 15 daq TTL, stateless — o'chirilgan/deaktivatsiya qilingan foydalanuvchi eski access tokeni muddati tugagunicha ishlayveradi), refresh token rotation + reuse-detection (eski token qayta ishlatilsa, shu foydalanuvchining BARCHA sessiyalari bekor qilinadi). RBAC: BEMOR / SHIFOKOR / ADMINISTRATOR. Birinchi ADMINISTRATOR hisobini public endpoint orqali yaratib bo'lmaydi — DB'ga to'g'ridan-to'g'ri seed qilinishi kerak, shundan keyingina admin boshqa SHIFOKOR/ADMIN hisoblarini `provision` qila oladi.",
+      "item": [
+        {
+          "name": "Register (Bemor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Yangi BEMOR ro'yxatdan o'tadi (rol tanlanmaydi — doim BEMOR). `phone` qat'iy `+998XXXXXXXXX` formatida, `password` kamida 8 belgi (max cheklovi yo'q — bcrypt 72 baytdan uzunini jimgina kesib tashlaydi, amalda muammo emas). Duplikat raqam -> 409.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"+998901234567\",\n    \"password\": \"TestPass123\",\n    \"fullName\": \"Test Bemor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.collectionVariables.set('accessToken', data.tokens.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', data.tokens.refreshToken);",
+                  "  pm.collectionVariables.set('bemorId', data.user.id);",
+                  "  pm.collectionVariables.set('bemorPhone', pm.request.body ? JSON.parse(pm.request.body.raw).phone : '');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (Bemor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Noto'g'ri raqam/parol -> 401 (bir xil xabar, qaysi biri xato ekanini oshkor qilmaydi). Deaktivatsiya qilingan hisob -> 401.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"+998901234567\",\n    \"password\": \"TestPass123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.collectionVariables.set('accessToken', data.tokens.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', data.tokens.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Har chaqiriqda YANGI refresh token qaytadi (rotation), eskisi darhol bekor qilinadi. Eskisini QAYTA ishlatishga urinish -> 401 VA shu urinish natijasida hozirgi (yangi) token ham majburan bekor qilinadi — o'g'irlashdan himoya.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.collectionVariables.set('accessToken', data.tokens.accessToken);",
+                  "  pm.collectionVariables.set('refreshToken', data.tokens.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Faqat shu refresh tokenni bekor qiladi (boshqa qurilmalardagi sessiyalarga tegmaydi).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Joriy foydalanuvchi profili. Token yo'q/yaroqsiz -> 401."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "Mavjud bo'lmagan raqam uchun ham 200 qaytaradi (user enumeration'dan himoya). Kod hozircha REAL SMS emas — server konsoliga `[SMS STUB] ... tiklash kodi: XXXXXX` deb chiqadi (Eskiz.uz hali ulanmagan).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"+998901234567\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            },
+            "description": "Kod 10 daqiqa amal qiladi, bir marta ishlatiladi. Muvaffaqiyatli reset — foydalanuvchining BARCHA faol refresh tokenlari ham bekor qilinadi (majburiy qayta login).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"+998901234567\",\n    \"code\": \"123456\",\n    \"newPassword\": \"YangiParol456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[Admin] List Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/users?role=BEMOR&isActive=true&search=&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "BEMOR",
+                  "disabled": true
+                },
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Faqat ADMINISTRATOR. Filter: role, isActive, search (phone/fullName, case-insensitive)."
+          },
+          "response": []
+        },
+        {
+          "name": "[Admin] Update User Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/users/{{targetUserId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "users",
+                "{{targetUserId}}",
+                "status"
+              ]
+            },
+            "description": "Deaktivatsiya qilinganda foydalanuvchining barcha faol refresh tokenlari bekor qilinadi — lekin MAVJUD access token o'zining 15 daqiqalik muddati tugagunicha hali ishlayveradi (stateless JWT dizayni, darhol bloklanmaydi).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[Admin] Provision User (SHIFOKOR/ADMINISTRATOR)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/users/provision",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "users",
+                "provision"
+              ]
+            },
+            "description": "`role` faqat SHIFOKOR yoki ADMINISTRATOR bo'lishi mumkin (BEMOR uchun oddiy /register bor) — boshqa qiymat -> 400.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"+998907654321\",\n    \"password\": \"DoctorPass123\",\n    \"fullName\": \"Dr. Aliyev\",\n    \"role\": \"SHIFOKOR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('shifokorPhone', JSON.parse(pm.request.body.raw).phone);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (Shifokor) — provision qilingandan keyin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Yuqoridagi provision so'rovidan keyin shifokor sifatida kirish uchun.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"{{shifokorPhone}}\",\n    \"password\": \"DoctorPass123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('shifokorAccessToken', pm.response.json().data.tokens.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Drug",
+      "description": "Dorilar katalogi. GET so'rovlari ochiq (autentifikatsiyasiz) — lekin `isActive=false` filtri orqali soft-delete qilingan dorilarni ham ko'rish mumkin (bu ataylab emas, minor topilma). Yozish faqat ADMINISTRATOR.",
+      "item": [
+        {
+          "name": "List Drugs (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/drugs?search=&dosageForm=TABLETKA&requiresPrescription=false&isActive=true&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "drugs"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dosageForm",
+                  "value": "TABLETKA",
+                  "disabled": true
+                },
+                {
+                  "key": "requiresPrescription",
+                  "value": "false",
+                  "disabled": true
+                },
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Token shart emas. Default `isActive=true` (faqat faol dorilar)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Drug by ID (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/drugs/{{drugId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "drugs",
+                "{{drugId}}"
+              ]
+            },
+            "description": "Topilmasa yoki `isActive=false` bo'lsa -> 404."
+          },
+          "response": []
+        },
+        {
+          "name": "[Admin] Create Drug",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/drugs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "drugs"
+              ]
+            },
+            "description": "`barcode` unique (berilsa) -> takrorlansa 409. `price` musbat bo'lishi shart -> 400 aks holda.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Paracetamol Extra\",\n    \"internationalName\": \"Paracetamol\",\n    \"manufacturer\": \"Test MFR\",\n    \"country\": \"O'zbekiston\",\n    \"dosageForm\": \"TABLETKA\",\n    \"dosage\": \"500mg\",\n    \"packageSize\": \"20 tabletka/quti\",\n    \"barcode\": \"4780000000001\",\n    \"price\": 15000,\n    \"stock\": 100,\n    \"requiresPrescription\": false,\n    \"description\": \"\",\n    \"imageUrl\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('drugId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[Admin] Update Drug",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/drugs/{{drugId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "drugs",
+                "{{drugId}}"
+              ]
+            },
+            "description": "TUZATILGAN topilma: avval boshqa dorining barcode'iga o'zgartirsa xom Prisma xatosi bilan 500 qaytar edi — endi 409 \"Bu shtrix-kod bilan boshqa dori allaqachon mavjud\".",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"price\": 17000,\n    \"stock\": 80\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[Admin] Delete Drug (soft-delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/drugs/{{drugId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "drugs",
+                "{{drugId}}"
+              ]
+            },
+            "description": "`isActive=false` qiladi (jismoniy o'chirmaydi) — bog'liq PrescriptionItem/MedicationSchedule/DrugInteraction yozuvlari buzilmaydi."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Prescription",
+      "description": "Ikki manba: OCR (rasm yuklash, shifokor tasdiqlashi kerak) va DMED_QR (mock adapter, darhol APPROVED). Tasdiqlanganda avtomatik: (a) dori nomi Drug katalogiga Levenshtein bilan bog'lanadi, (b) MedicationSchedule avtomatik yaratiladi.",
+      "item": [
+        {
+          "name": "Upload Prescription (OCR)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/prescriptions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prescriptions"
+              ]
+            },
+            "description": "multipart/form-data, maydon nomi aynan `file` bo'lishi shart. Faqat rasm (JPEG/PNG/WEBP), max 10MB. TUZATILGAN topilma: avval noto'g'ri fayl turi yoki 10MB'dan katta fayl 500 qaytarardi — endi mos ravishda 400/413. OCR hech narsa topa olmasa -> 422. `ocr-service` ishlamasa -> 502.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Import from dmed (QR)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/prescriptions/dmed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prescriptions",
+                "dmed"
+              ]
+            },
+            "description": "Mock adapter: sentinel `00000000-0000-0000-0000-000000000000` -> 404 (\"topilmadi\" simulyatsiyasi), boshqa har qanday qiymat -> muvaffaqiyatli mock ma'lumot bilan 201, darhol APPROVED. TOPILMA: `uuid` maydoni haqiqiy UUID formatiga tekshirilmaydi (bo'sh bo'lmagan istalgan matn qabul qilinadi) — mock bilan zararsiz, real dmed API ulanganda qattiqroq validatsiya tavsiya etiladi. Bir xil uuid qayta yuborilsa -> 409.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"uuid\": \"{{$guid}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('prescriptionId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Prescriptions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/prescriptions?status=PENDING&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prescriptions"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "PENDING",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "BEMOR faqat o'zinikini ko'radi (avtomatik filtrlanadi). SHIFOKOR/ADMINISTRATOR — hammasini."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Prescription by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/prescriptions/{{prescriptionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prescriptions",
+                "{{prescriptionId}}"
+              ]
+            },
+            "description": "BEMOR boshqa bemorning retseptini ko'rishga urinsa -> 403."
+          },
+          "response": []
+        },
+        {
+          "name": "[Shifokor] Approve Prescription",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{shifokorAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/prescriptions/{{prescriptionId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prescriptions",
+                "{{prescriptionId}}",
+                "approve"
+              ]
+            },
+            "description": "Faqat `PENDING` (OCR manbali) retseptlar uchun amaliy — DMED_QR retseptlari import paytida allaqachon APPROVED, qayta approve qilinsa -> 409. Muvaffaqiyatli approve -> avtomatik MedicationSchedule yaratadi (halokatga uchramaydigan yon effekt, xato bo'lsa ham approve natijasi bekor qilinmaydi)."
+          },
+          "response": []
+        },
+        {
+          "name": "[Shifokor] Reject Prescription",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{shifokorAccessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/prescriptions/{{prescriptionId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prescriptions",
+                "{{prescriptionId}}",
+                "reject"
+              ]
+            },
+            "description": "`reason` kamida 3 belgi -> aks holda 400. Allaqachon ko'rib chiqilgan bo'lsa -> 409.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"reason\": \"Dozasi noaniq, qayta yuklang\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Schedule",
+      "description": "F-003 dori qabul qilish jadvali. Oilaviy profil bilan integratsiya: natija o'zi + oila a'zolari (to'liq huquq) + CareLink orqali ulangan akkauntlar (faqat o'qish) — birlashtirilgan holda qaytadi, `owner.type` bilan.",
+      "item": [
+        {
+          "name": "Create Schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/schedules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "schedules"
+              ]
+            },
+            "description": "`familyMemberId` berilsa — o'zi boshqaradigan oila a'zosiga tegishli bo'ladi (boshqa/mavjud bo'lmagan id -> 403). TOPILMA: `endDate < startDate` bo'lsa ham qabul qilinadi (201) — mantiqiy tekshiruv yo'q, natijada hech qachon eslatma yaratilmaydigan \"o'lik\" jadval jim ravishda hosil bo'ladi.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"familyMemberId\": null,\n    \"drugId\": null,\n    \"drugName\": \"Vitamin C\",\n    \"dosageNote\": \"1 tabletka\",\n    \"scheduleTimes\": [\n        \"08:00\",\n        \"13:00\",\n        \"20:00\"\n    ],\n    \"startDate\": \"2026-08-21\",\n    \"endDate\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('scheduleId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Schedules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/schedules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "schedules"
+              ]
+            },
+            "description": "Sahifalashsiz, to'liq ro'yxat. Har bir elementda `owner: {type: SELF|FAMILY_MEMBER|LINKED_ACCOUNT, id, fullName}`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Schedule by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/schedules/{{scheduleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "schedules",
+                "{{scheduleId}}"
+              ]
+            },
+            "description": "O'ziniki, oila a'zosiniki yoki ulangan akkauntniki bo'lsa ko'rsatadi (LINKED_ACCOUNT ham o'qish uchun ochiq), aks holda 404."
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Schedule",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/schedules/{{scheduleId}}/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "schedules",
+                "{{scheduleId}}",
+                "deactivate"
+              ]
+            },
+            "description": "Faqat o'ziniki/oila a'zosiniki uchun ishlaydi. CareLink orqali ulangan (faqat-ko'rish) akkauntning jadvalini o'zgartirishga urinish -> 403."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Dose",
+      "description": "\"Oldim\"/\"O'tkazib yubordim\" tugmalari. DoseEvent'lar `dose-scheduler.job.ts` cron orqali avtomatik yaratiladi (har 5 daqiqada) — bu endpointlar orqali qo'lda yaratilmaydi.",
+      "item": [
+        {
+          "name": "List Doses",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/doses?status=PENDING&from=&to=&page=1&limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "doses"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "PENDING",
+                  "disabled": true
+                },
+                {
+                  "key": "from",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Xuddi schedule kabi birlashtirilgan (o'zi + oila a'zolari + ulangan akkauntlar)."
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Dose (\"Oldim\")",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/doses/{{doseId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "doses",
+                "{{doseId}}",
+                "confirm"
+              ]
+            },
+            "description": "Faqat egasi/oila a'zosi uchun. CareLink orqali ulangan akkauntning dozasini confirm qilishga urinish -> 403 (faqat ko'rish). Allaqachon TAKEN/SKIPPED bo'lsa -> 409."
+          },
+          "response": []
+        },
+        {
+          "name": "Skip Dose (\"O'tkazib yubordim\")",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/doses/{{doseId}}/skip",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "doses",
+                "{{doseId}}",
+                "skip"
+              ]
+            },
+            "description": "Xatoliklar confirm bilan bir xil."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Interaction",
+      "description": "F-004 (soddalashtirilgan) — dori-dori o'zaro ta'siri. Hozircha faqat struktura: real ma'lumot manbai (DrugBank litsenziyasi) yo'q, jadval admin tomonidan qo'lda to'ldiriladi, boshlanishda bo'sh.",
+      "item": [
+        {
+          "name": "[Admin] Create Interaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/interactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "interactions"
+              ]
+            },
+            "description": "Bir xil ikkita dori -> 400. Juftlik ichki ravishda `drugAId < drugBId` tartibida saqlanadi — teskari tartibda (B,A) qayta yuborish ham 409 (duplikat) qaytaradi.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"drugAId\": \"{{drugId}}\",\n    \"drugBId\": \"{{drugId2}}\",\n    \"severity\": \"RED\",\n    \"description\": \"Qon ketish xavfini oshiradi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('interactionId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[Admin] List Interactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/interactions?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "interactions"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "[Admin] Delete Interaction",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminAccessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/interactions/{{interactionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "interactions",
+                "{{interactionId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Check Interactions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/interactions/check",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "interactions",
+                "check"
+              ]
+            },
+            "description": "Istalgan rol (bemor ham o'z dorilarini tekshira oladi). Kamida 2 ta drugId shart -> aks holda 400. Jadval bo'sh bo'lgani uchun hozircha ko'pincha bo'sh massiv qaytadi — bu normal holat.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"drugIds\": [\n        \"{{drugId}}\",\n        \"{{drugId2}}\"\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Family",
+      "description": "Oilaviy profil. Ikki holat: akkauntsiz shaxs (FamilyMember, guardian to'liq boshqaradi) va haqiqiy akkaunti bor shaxs (CareLink, telefon orqali darhol — tasdiqlashsiz — faqat-ko'rish huquqi bilan ulanadi). CareLink darhol yaratilishi ongli tanlangan xavfsizlik murosasi — SMS/push xabardor qilish hali yo'qligi sabab.",
+      "item": [
+        {
+          "name": "Create Family Member (akkauntsiz)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/family/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "family",
+                "members"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"fullName\": \"Kichkina bola\",\n    \"relationship\": \"farzand\",\n    \"birthDate\": \"2020-05-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('familyMemberId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Family Members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/family/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "family",
+                "members"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Family Member",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/family/members/{{familyMemberId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "family",
+                "members",
+                "{{familyMemberId}}"
+              ]
+            },
+            "description": "Bog'liq MedicationSchedule'lar kaskad o'chadi."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Care Link (haqiqiy akkauntga ulanish)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/family/links",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "family",
+                "links"
+              ]
+            },
+            "description": "Darhol yaratiladi (tasdiqlash bosqichisiz) — o'zingizga ulanish -> 400, mavjud bo'lmagan raqam -> 404, bir xil akkauntga qayta -> 409.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"phone\": \"+998907654321\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('careLinkId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Care Links",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/family/links",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "family",
+                "links"
+              ]
+            },
+            "description": "`{ watching: [...], watchedBy: [...] }` — ikkala yo'nalish."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Care Link",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/family/links/{{careLinkId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "family",
+                "links",
+                "{{careLinkId}}"
+              ]
+            },
+            "description": "Kuzatuvchi YOKI kuzatiladigan tomon — ikkalasi ham o'chira oladi."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
