@@ -20,7 +20,9 @@ model User {
   passwordHash          String
   fullName              String
   role                  Role                 @default(BEMOR)
-  isActive              Boolean              @default(true)
+  isActive              Boolean              @default(true) // false — muddatsiz bloklangan
+  blockedUntil          DateTime? // vaqtincha blok: shu vaqtgacha kira olmaydi, muddat o'tgach avtomatik ochiladi
+  blockReason           String? // admin ko'rsatgan bloklash sababi (muddatli yoki muddatsiz)
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
   refreshTokens         RefreshToken[]

@@ -1,5 +1,6 @@
 import { NextFunction } from "express";
 import { AuthService } from "../services/auth.service";
+import { AdminService } from "../services/admin.service";
 import {
     AdminUserResponse,
     AuthResponse,
@@ -85,7 +86,11 @@ export class AuthController {
         next: NextFunction
     ): Promise<void> {
         try {
-            const result = await AuthService.updateUserStatus(req.params.id, req.body);
+            if (!req.user) {
+                throw new AppError(401, "Avtorizatsiyadan o'tilmagan");
+            }
+            // O'zini yoki oxirgi faol adminni bloklashdan himoya AdminService'da
+            const result = await AdminService.setUserStatus(req.user.sub, req.params.id, req.body.isActive);
             res.status(200).json({ success: true, message: "Foydalanuvchi holati yangilandi", data: result });
         } catch (error) {
             next(error);

@@ -10,9 +10,9 @@ import {
 
 // Juftlikni doim bir xil tartibda saqlaymiz — A-B va B-A bir xil yozuv hisoblanishi uchun
 // (aks holda ikkala tartib uchun alohida-alohida yozuv kiritilishi mumkin edi).
-const sortPair = (a: string, b: string): [string, string] => (a < b ? [a, b] : [b, a]);
+export const sortPair = (a: string, b: string): [string, string] => (a < b ? [a, b] : [b, a]);
 
-const toInteractionResponse = (row: DrugInteraction): InteractionResponse => ({
+export const toInteractionResponse = (row: DrugInteraction): InteractionResponse => ({
     id: row.id,
     drugAId: row.drugAId,
     drugBId: row.drugBId,

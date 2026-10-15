@@ -16,7 +16,7 @@ export class OcrService {
             Matn harflariga, dorilar nomiga va raqamlarga juda e'tiborli bo'ling.
         `;
         const response = await genAi.models.generateContent({
-            model: "models/gemini-flash-latest",
+                model: process.env.GEMINI_MODEL ?? "models/gemini-3.8-flash",
             contents: [imagePart, prompt],
             config: {
                 responseMimeType: "application/json",

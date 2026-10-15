@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { queryBoolean } from "./common.dto";
 import { DosageForm } from "@prisma/client";
 
 export const createDrugSchema = z.object({
@@ -22,8 +23,7 @@ export const updateDrugSchema = createDrugSchema.partial();
 export const listDrugQuerySchema = z.object({
     search: z.string().max(200).optional(),
     dosageForm: z.nativeEnum(DosageForm).optional(),
-    requiresPrescription: z.coerce.boolean().optional(),
-    isActive: z.coerce.boolean().optional(),
+    requiresPrescription: queryBoolean.optional(),
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20)
 });

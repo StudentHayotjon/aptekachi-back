@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { queryBoolean } from "./common.dto";
 import { Role } from "@prisma/client";
 
 const phoneSchema = z.string().regex(/^\+998\d{9}$/, "Telefon raqam +998XXXXXXXXX formatida bo'lishi kerak");
@@ -30,7 +31,7 @@ export const resetPasswordSchema = z.object({
 
 export const listUsersQuerySchema = z.object({
     role: z.nativeEnum(Role).optional(),
-    isActive: z.coerce.boolean().optional(),
+    isActive: queryBoolean.optional(),
     search: z.string().max(200).optional(),
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20)
@@ -65,6 +66,8 @@ export interface AuthUserResponse {
 
 export interface AdminUserResponse extends AuthUserResponse {
     isActive: boolean;
+    blockedUntil: Date | null; // faqat hozir amal qilayotgan vaqtincha blok; muddati o'tgan bo'lsa null
+    blockReason: string | null;
     createdAt: Date;
 }
 

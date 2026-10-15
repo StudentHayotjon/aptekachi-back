@@ -28,7 +28,18 @@ DIRECT_URL=${{Postgres.DATABASE_URL}}
 JWT_ACCESS_SECRET=REPLACE_WITH_A_RANDOM_SECRET
 OCR_SERVICE_URL=http://${{ocr-service.RAILWAY_PRIVATE_DOMAIN}}:3000
 DMED_MODE=mock
+CORS_ORIGINS=https://YOUR_ADMIN_PANEL_DOMAIN
 ```
+
+`CORS_ORIGINS` is only needed once a browser-based admin panel calls the API (comma-separated origins; see docs/ADMIN-API.md).
+
+admin-panel (optional third service, Root Directory `/apps/admin-panel`, Config File `/apps/admin-panel/railway.json`):
+
+```dotenv
+VITE_API_URL=https://${{core-service.RAILWAY_PUBLIC_DOMAIN}}
+```
+
+`VITE_API_URL` is baked in at build time. Generate a public domain for admin-panel and put it into core-service `CORS_ORIGINS`. The panel never calls ocr-service directly; it goes through core's authenticated `/api/v1/admin/ocr/analyze` proxy, so ocr-service stays private.
 
 Generate a JWT secret locally with `node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"` and paste it only into Railway Variables.
 

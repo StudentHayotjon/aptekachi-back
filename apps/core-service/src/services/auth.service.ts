@@ -16,7 +16,6 @@ import {
     ProvisionUserDto,
     RegisterDto,
     ResetPasswordDto,
-    UpdateUserStatusDto,
     UserListResponse
 } from "../dtos/auth.dto";
 
@@ -27,9 +26,18 @@ const toUserResponse = (user: User): AuthUserResponse => ({
     role: user.role
 });
 
-const toAdminUserResponse = (user: User): AdminUserResponse => ({
+/** Vaqtincha blok hali tugamagan bo'lsa — muddati o'tgan blok avtomatik bekor hisoblanadi (alohida job kerak emas) */
+export const isTemporarilyBlocked = (user: Pick<User, "blockedUntil">, now = new Date()): boolean =>
+    user.blockedUntil !== null && user.blockedUntil > now;
+
+const formatBlockedUntil = (date: Date): string =>
+    date.toLocaleString("ru-RU", { timeZone: process.env.TZ ?? "Asia/Tashkent", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+export const toAdminUserResponse = (user: User): AdminUserResponse => ({
     ...toUserResponse(user),
     isActive: user.isActive,
+    blockedUntil: isTemporarilyBlocked(user) ? user.blockedUntil : null,
+    blockReason: !user.isActive || isTemporarilyBlocked(user) ? user.blockReason : null,
     createdAt: user.createdAt
 });
 const issueTokens = async (user: User): Promise<AuthResponse["tokens"]> => {
@@ -72,6 +80,11 @@ export class AuthService {
             throw new AppError(401, "Telefon raqam yoki parol noto'g'ri");
         }
 
+        // Blok haqida faqat parol to'g'ri bo'lganda aytiladi — aks holda hisob holati oshkor bo'lardi
+        if (isTemporarilyBlocked(user)) {
+            throw new AppError(403, `Hisobingiz ${formatBlockedUntil(user.blockedUntil!)} gacha vaqtincha bloklangan`);
+        }
+
         return { user: toUserResponse(user), tokens: await issueTokens(user) };
     }
 
@@ -99,7 +112,7 @@ export class AuthService {
             throw new AppError(401, "Refresh token muddati o'tgan, qaytadan tizimga kiring");
         }
 
-        if (!existing.user.isActive) {
+        if (!existing.user.isActive || isTemporarilyBlocked(existing.user)) {
             throw new AppError(401, "Foydalanuvchi faol emas");
         }
 
@@ -121,7 +134,7 @@ export class AuthService {
 
     public static async me(userId: string): Promise<AuthUserResponse> {
         const user = await prisma.user.findUnique({ where: { id: userId } });
-        if (!user || !user.isActive) {
+        if (!user || !user.isActive || isTemporarilyBlocked(user)) {
             throw new AppError(404, "Foydalanuvchi topilmadi");
         }
         return toUserResponse(user);
@@ -147,22 +160,6 @@ export class AuthService {
         ]);
 
         return { items: items.map(toAdminUserResponse), total, page, limit };
-    }
-
-    public static async updateUserStatus(id: string, dto: UpdateUserStatusDto): Promise<AdminUserResponse> {
-        const existing = await prisma.user.findUnique({ where: { id } });
-        if (!existing) {
-            throw new AppError(404, "Foydalanuvchi topilmadi");
-        }
-
-        const user = await prisma.user.update({ where: { id }, data: { isActive: dto.isActive } });
-
-        if (!dto.isActive) {
-            // Bloklangan foydalanuvchining barcha sessiyalari bekor qilinadi (majburiy chiqish)
-            await prisma.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
-        }
-
-        return toAdminUserResponse(user);
     }
 
     public static async provision(dto: ProvisionUserDto): Promise<AdminUserResponse> {

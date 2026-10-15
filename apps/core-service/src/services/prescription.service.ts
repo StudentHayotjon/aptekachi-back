@@ -13,7 +13,7 @@ import { findBestDrugMatch } from "../utils/drug-matcher.util";
 
 const UPLOAD_DIR = path.join(__dirname, "..", "..", "uploads", "prescriptions");
 
-interface OcrPrescriptionItem {
+export interface OcrPrescriptionItem {
     retsept_id: string;
     himoya_kodi: string;
     bemor_fish: string;
@@ -39,7 +39,7 @@ interface OcrApiResponse {
 type PrescriptionWithItems = Prescription & { items: PrescriptionItem[] };
 type Requester = { id: string; role: Role };
 
-const toPrescriptionResponse = (prescription: PrescriptionWithItems): PrescriptionResponse => ({
+export const toPrescriptionResponse = (prescription: PrescriptionWithItems): PrescriptionResponse => ({
     id: prescription.id,
     patientId: prescription.patientId,
     doctorId: prescription.doctorId,
@@ -71,7 +71,7 @@ const toPrescriptionResponse = (prescription: PrescriptionWithItems): Prescripti
     updatedAt: prescription.updatedAt
 });
 
-const analyzeWithOcrService = async (file: Express.Multer.File): Promise<OcrPrescriptionItem[]> => {
+export const analyzeWithOcrService = async (file: Express.Multer.File): Promise<OcrPrescriptionItem[]> => {
     const formData = new FormData();
     formData.append("file", new Blob([new Uint8Array(file.buffer)], { type: file.mimetype }), file.originalname);
 
@@ -100,7 +100,7 @@ const saveImage = async (file: Express.Multer.File): Promise<string> => {
 
 // Dori bazasidan Levenshtein moslashtirish — halokatga uchramaydigan yon hisoblash. Xato bo'lsa
 // yoki mos dori topilmasa, drugId=null bilan davom etiladi (retsept yaratilishini bekor qilmaydi).
-const matchDrugIds = async (rawNames: string[]): Promise<(string | null)[]> => {
+export const matchDrugIds = async (rawNames: string[]): Promise<(string | null)[]> => {
     try {
         const candidates = await DrugService.listMatchCandidates();
         return rawNames.map((raw) => findBestDrugMatch(raw, candidates));

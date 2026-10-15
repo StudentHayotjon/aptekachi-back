@@ -1,0 +1,94 @@
+/* Dizayn tokenlari: ranglar, radiuslar, soyalar, shriftlar. Qorong'i mavzu tizim sozlamasiga
+   yoki <html data-theme="dark"> ga qarab almashadi. */
+
+:root {
+    --brand: #347fe7;
+    --brand-2: #19c9e8;
+    --brand-soft: #e6f0ff;
+    --brand-ink: #1d5fbf;
+
+    --bg: #f2f5fa;
+    --surface: #ffffff;
+    --surface-2: #f7f9fc;
+    --surface-3: #eef2f8;
+    --border: #e3e9f2;
+    --border-strong: #cfd8e5;
+    --text: #1b2638;
+    --text-2: #4a5568;
+    --muted: #7b8698;
+
+    --success: #22a95a;
+    --success-soft: #e3f6ea;
+    --warning: #e29a12;
+    --warning-soft: #fdf2dc;
+    --danger: #e5403c;
+    --danger-soft: #fde7e6;
+    --violet: #7b61ff;
+    --violet-soft: #eeeaff;
+
+    --sidebar: #0f1b2e;
+    --sidebar-2: #16243b;
+    --sidebar-text: #a9b6cc;
+    --sidebar-label: #66748c;
+
+    --radius: 16px;
+    --radius-md: 12px;
+    --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(16, 32, 64, 0.04), 0 4px 16px rgba(16, 32, 64, 0.06);
+    --shadow-lg: 0 24px 64px rgba(16, 32, 64, 0.18);
+    --ring: 0 0 0 4px rgba(52, 127, 231, 0.18);
+
+    --font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+
+    --sidebar-width: 252px;
+    --gutter: 32px;
+
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --brand-soft: #16284a;
+        --brand-ink: #7fb0ff;
+        --bg: #0a111d;
+        --surface: #111a2a;
+        --surface-2: #142034;
+        --surface-3: #1a2840;
+        --border: #1f2d45;
+        --border-strong: #2b3c59;
+        --text: #e8eef8;
+        --text-2: #b7c3d6;
+        --muted: #8090a8;
+        --success-soft: #0f2d1d;
+        --warning-soft: #33260a;
+        --danger-soft: #3a1514;
+        --violet-soft: #221d45;
+        --sidebar: #070d18;
+        --sidebar-2: #0f1828;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+        color-scheme: dark;
+    }
+}
+
+:root[data-theme="dark"] {
+    --brand-soft: #16284a;
+    --brand-ink: #7fb0ff;
+    --bg: #0a111d;
+    --surface: #111a2a;
+    --surface-2: #142034;
+    --surface-3: #1a2840;
+    --border: #1f2d45;
+    --border-strong: #2b3c59;
+    --text: #e8eef8;
+    --text-2: #b7c3d6;
+    --muted: #8090a8;
+    --success-soft: #0f2d1d;
+    --warning-soft: #33260a;
+    --danger-soft: #3a1514;
+    --violet-soft: #221d45;
+    --sidebar: #070d18;
+    --sidebar-2: #0f1828;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+    color-scheme: dark;
+}

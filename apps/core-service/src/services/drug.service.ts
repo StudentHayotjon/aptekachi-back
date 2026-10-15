@@ -4,7 +4,7 @@ import { AppError } from "../utils/app-error.util";
 import { CreateDrugDto, DrugListResponse, DrugResponse, ListDrugQueryDto, UpdateDrugDto } from "../dtos/drug.dto";
 import { DrugMatchCandidate } from "../utils/drug-matcher.util";
 
-const toDrugResponse = (drug: Drug): DrugResponse => ({
+export const toDrugResponse = (drug: Drug): DrugResponse => ({
     id: drug.id,
     name: drug.name,
     internationalName: drug.internationalName,
@@ -26,10 +26,10 @@ const toDrugResponse = (drug: Drug): DrugResponse => ({
 
 export class DrugService {
     public static async list(query: ListDrugQueryDto): Promise<DrugListResponse> {
-        const { search, dosageForm, requiresPrescription, isActive, page, limit } = query;
+        const { search, dosageForm, requiresPrescription, page, limit } = query;
 
         const where: Prisma.DrugWhereInput = {
-            isActive: isActive ?? true,
+            isActive: true, // nofaol dorilar faqat admin panelda (GET /admin/drugs)
             ...(dosageForm ? { dosageForm } : {}),
             ...(requiresPrescription !== undefined ? { requiresPrescription } : {}),
             ...(search ? {
