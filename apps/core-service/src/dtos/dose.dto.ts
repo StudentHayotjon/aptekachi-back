@@ -11,6 +11,17 @@ export const listDoseQuerySchema = z.object({
 
 export type ListDoseQueryDto = z.infer<typeof listDoseQuerySchema>;
 
+// Mobil ilova doza holatini kun bo'yicha boshqaradi (bitta dori = bitta kunlik holat), server esa
+// har bir vaqt-sloti uchun alohida DoseEvent saqlaydi. Shu endpoint berilgan sanadagi jadvalning
+// BARCHA vaqt-slotlarini bitta holatga keltiradi (upsert) — undo (PENDING) ham qo'llab-quvvatlanadi,
+// cron hali hodisa yaratmagan bo'lsa ham ishlaydi (idempotent).
+export const setScheduleDayDoseSchema = z.object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Sana YYYY-MM-DD formatida bo'lishi kerak"),
+    status: z.nativeEnum(DoseStatus)
+});
+
+export type SetScheduleDayDoseDto = z.infer<typeof setScheduleDayDoseSchema>;
+
 export interface DoseEventResponse {
     id: string;
     scheduleId: string;

@@ -1,7 +1,7 @@
 import { DoseEvent, DoseStatus, MedicationSchedule } from "@prisma/client";
 import { prisma } from "../config/prisma.client";
 import { AppError } from "../utils/app-error.util";
-import { DoseEventResponse, DoseListResponse, ListDoseQueryDto } from "../dtos/dose.dto";
+import { DoseEventResponse, DoseListResponse, ListDoseQueryDto, SetScheduleDayDoseDto } from "../dtos/dose.dto";
 import { FamilyService } from "./family.service";
 
 type DoseEventWithSchedule = DoseEvent & { schedule: MedicationSchedule };
@@ -117,5 +117,48 @@ export class DoseService {
         });
 
         return toDoseResponse(updated);
+    }
+
+    // Mobil ilovaning kunlik (bitta dori = bitta holat) modeli uchun: berilgan sanadagi jadvalning
+    // barcha vaqt-slotlarini bir holatga keltiradi. Idempotent (upsert) — cron hodisa yaratmagan
+    // bo'lsa ham ishlaydi, undo (PENDING) ham qo'llab-quvvatlanadi. Faqat yozish huquqi borlar uchun.
+    public static async setScheduleDayStatus(
+        scheduleId: string,
+        requesterId: string,
+        dto: SetScheduleDayDoseDto
+    ): Promise<DoseEventResponse[]> {
+        const schedule = await prisma.medicationSchedule.findUnique({ where: { id: scheduleId } });
+        if (!schedule) {
+            throw new AppError(404, "Jadval topilmadi");
+        }
+
+        const [familyMemberIds, linkedSubjectIds] = await Promise.all([
+            FamilyService.resolveFamilyMemberIds(requesterId),
+            FamilyService.resolveLinkedSubjectIds(requesterId)
+        ]);
+        if (!isWritable(schedule, requesterId, familyMemberIds)) {
+            if (isReadable(schedule, requesterId, familyMemberIds, linkedSubjectIds)) {
+                throw new AppError(403, "Bu jadval faqat ko'rish uchun ulangan — belgilash mumkin emas");
+            }
+            throw new AppError(404, "Jadval topilmadi");
+        }
+
+        const [year, month, day] = dto.date.split("-").map(Number);
+        const confirmedAt = dto.status === DoseStatus.PENDING ? null : new Date();
+
+        const events = await prisma.$transaction(
+            schedule.scheduleTimes.map((time) => {
+                const [hour, minute] = time.split(":").map(Number);
+                const scheduledAt = new Date(year, month - 1, day, hour, minute, 0, 0);
+                return prisma.doseEvent.upsert({
+                    where: { scheduleId_scheduledAt: { scheduleId, scheduledAt } },
+                    update: { status: dto.status, confirmedAt },
+                    create: { scheduleId, scheduledAt, status: dto.status, confirmedAt },
+                    include: { schedule: true }
+                });
+            })
+        );
+
+        return events.map(toDoseResponse);
     }
 }
