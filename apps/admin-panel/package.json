@@ -5,7 +5,7 @@
   "description": "Aptekachi admin paneli — core-service va OCR (core proksi orqali) uchun yagona boshqaruv interfeysi",
   "type": "module",
   "scripts": {
-    "dev": "vite -- --c",
+    "dev": "node --use-system-ca node_modules/vite/bin/vite.js",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"

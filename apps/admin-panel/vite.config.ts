@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, ".", "");
-    const target = (env.VITE_API_URL ?? "http://localhost:3001").replace(/\/+$/, "").replace(/\/api\/v1$/, "");
+    const target = (env.VITE_API_URL ?? "https://aptekachi-back.onrender.com").replace(/\/+$/, "").replace(/\/api\/v1$/, "");
 
     return {
         plugins: [react()],

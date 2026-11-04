@@ -5,7 +5,7 @@
  */
 export const API_ORIGIN = import.meta.env.DEV
     ? ""
-    : (import.meta.env.VITE_API_URL ?? "http://localhost:3001").replace(/\/+$/, "").replace(/\/api\/v1$/, "");
+    : (import.meta.env.VITE_API_URL ?? "https://aptekachi-back.onrender.com").replace(/\/+$/, "").replace(/\/api\/v1$/, "");
 
 export const API_BASE = `${API_ORIGIN}/api/v1`;
 

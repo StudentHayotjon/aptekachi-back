@@ -1,7 +1,7 @@
 import { FamilyMember, MedicationSchedule, Prisma, PrescriptionItem, User } from "@prisma/client";
 import { prisma } from "../config/prisma.client";
 import { AppError } from "../utils/app-error.util";
-import { CreateScheduleDto, ScheduleOwner, ScheduleResponse } from "../dtos/schedule.dto";
+import { CreateScheduleDto, ScheduleOwner, ScheduleResponse, UpdateScheduleDto } from "../dtos/schedule.dto";
 import { buildDosageNote, buildScheduleTimes, isNonDailyDose, parseDailyDoseCount, parseDurationDays, addDays } from "../utils/dose-parser.util";
 import { FamilyService } from "./family.service";
 
@@ -175,6 +175,39 @@ export class ScheduleService {
         }
 
         return toScheduleResponse(schedule, requesterId);
+    }
+
+    public static async update(id: string, requesterId: string, dto: UpdateScheduleDto): Promise<ScheduleResponse> {
+        const schedule = await prisma.medicationSchedule.findUnique({ where: { id }, include: ownerInclude });
+        if (!schedule) {
+            throw new AppError(404, "Jadval topilmadi");
+        }
+
+        const [familyMemberIds, linkedSubjectIds] = await Promise.all([
+            FamilyService.resolveFamilyMemberIds(requesterId),
+            FamilyService.resolveLinkedSubjectIds(requesterId)
+        ]);
+        if (!isWritable(schedule, requesterId, familyMemberIds)) {
+            if (isReadable(schedule, requesterId, familyMemberIds, linkedSubjectIds)) {
+                throw new AppError(403, "Bu jadval faqat ko'rish uchun ulangan — o'zgartirish mumkin emas");
+            }
+            throw new AppError(404, "Jadval topilmadi");
+        }
+
+        // Faqat berilgan maydonlar yangilanadi; endDate: null — muddatni olib tashlaydi.
+        const updated = await prisma.medicationSchedule.update({
+            where: { id },
+            data: {
+                ...(dto.drugName !== undefined ? { drugName: dto.drugName } : {}),
+                ...(dto.dosageNote !== undefined ? { dosageNote: dto.dosageNote } : {}),
+                ...(dto.scheduleTimes !== undefined ? { scheduleTimes: dto.scheduleTimes } : {}),
+                ...(dto.startDate !== undefined ? { startDate: dto.startDate } : {}),
+                ...(dto.endDate !== undefined ? { endDate: dto.endDate } : {})
+            },
+            include: ownerInclude
+        });
+
+        return toScheduleResponse(updated, requesterId);
     }
 
     public static async deactivate(id: string, requesterId: string): Promise<ScheduleResponse> {
